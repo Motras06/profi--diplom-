@@ -1,12 +1,23 @@
-// lib/screens/auth/specialist_home.dart
+// lib/screens/specialist/specialist_home.dart
 import 'package:flutter/material.dart';
 import 'package:profi/screens/auth/auth_screen.dart';
+import 'package:profi/screens/specialist/services_tab.dart';
+import 'package:profi/screens/specialist/chat_tab.dart';
+import 'package:profi/screens/specialist/profile_tab.dart';
+import 'package:profi/screens/specialist/orders_tab.dart';
 import '../../services/supabase_service.dart';
 
-class SpecialistHome extends StatelessWidget {
+class SpecialistHome extends StatefulWidget {
   final String displayName;
 
   const SpecialistHome({super.key, required this.displayName});
+
+  @override
+  State<SpecialistHome> createState() => _SpecialistHomeState();
+}
+
+class _SpecialistHomeState extends State<SpecialistHome> {
+  int _selectedIndex = 0;
 
   Future<void> _logout(BuildContext context) async {
     await supabase.auth.signOut();
@@ -15,6 +26,26 @@ class SpecialistHome extends StatelessWidget {
         MaterialPageRoute(builder: (_) => const AuthScreen()),
       );
     }
+  }
+
+  // Список отдельных экранов
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      ServicesTab(displayName: widget.displayName),
+      const ChatTab(),
+      ProfileTab(displayName: widget.displayName),
+      const OrdersTab(),
+    ];
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
   @override
@@ -27,31 +58,23 @@ class SpecialistHome extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => _logout(context),
+            tooltip: 'Выйти',
           ),
         ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.handyman, size: 80, color: Color(0xFF009999)),
-            const SizedBox(height: 24),
-            Text(
-              'Привет, $displayName!',
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Роль: Специалист',
-              style: TextStyle(fontSize: 18, color: Colors.grey),
-            ),
-            const SizedBox(height: 40),
-            ElevatedButton(
-              onPressed: () => _logout(context),
-              child: const Text('Выйти из аккаунта'),
-            ),
-          ],
-        ),
+      body: _pages[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        selectedItemColor: Theme.of(context).primaryColor,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.build), label: 'Услуги'),
+          BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Чаты'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Профиль'),
+          BottomNavigationBarItem(icon: Icon(Icons.assignment), label: 'Заказы'),
+        ],
       ),
     );
   }
