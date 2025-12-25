@@ -378,6 +378,41 @@
     "column_default": "CURRENT_TIMESTAMP"
   },
   {
+    "table_name": "service_photos",
+    "column_name": "id",
+    "data_type": "bigint",
+    "is_nullable": "NO",
+    "column_default": null
+  },
+  {
+    "table_name": "service_photos",
+    "column_name": "service_id",
+    "data_type": "integer",
+    "is_nullable": "NO",
+    "column_default": null
+  },
+  {
+    "table_name": "service_photos",
+    "column_name": "photo_url",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "column_default": null
+  },
+  {
+    "table_name": "service_photos",
+    "column_name": "order",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "column_default": "0"
+  },
+  {
+    "table_name": "service_photos",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "NO",
+    "column_default": "timezone('utc'::text, now())"
+  },
+  {
     "table_name": "services",
     "column_name": "id",
     "data_type": "integer",

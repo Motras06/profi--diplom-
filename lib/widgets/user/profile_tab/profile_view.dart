@@ -1,13 +1,11 @@
-// lib/widgets/specialist/profile_tab/profile_view.dart
+// lib/widgets/user/profile_tab/profile_view.dart
 import 'package:flutter/material.dart';
 
-import 'documents.dart'; // Новый экран
-import 'reviews.dart';   // Новый экран
+import '../../../screens/other/settings_screen.dart';
+import 'service_history.dart'; // Новый экран истории
 
 class ProfileView extends StatelessWidget {
   final String? displayName;
-  final String? specialty;
-  final String? about;
   final String? photoUrl;
   final VoidCallback onEdit;
   final VoidCallback onLogout;
@@ -15,8 +13,6 @@ class ProfileView extends StatelessWidget {
   const ProfileView({
     super.key,
     this.displayName,
-    this.specialty,
-    this.about,
     this.photoUrl,
     required this.onEdit,
     required this.onLogout,
@@ -36,40 +32,18 @@ class ProfileView extends StatelessWidget {
             backgroundImage: photoUrl != null ? NetworkImage(photoUrl!) : null,
             child: photoUrl == null
                 ? Text(
-                    displayName?[0].toUpperCase() ?? 'С',
+                    displayName?[0].toUpperCase() ?? 'П',
                     style: TextStyle(fontSize: 64, color: colorScheme.primary),
                   )
                 : null,
           ),
           const SizedBox(height: 16),
-          Text(displayName ?? 'Специалист', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-          const Text('Специалист', style: TextStyle(fontSize: 18, color: Colors.grey)),
-          const SizedBox(height: 8),
           Text(
-            specialty ?? 'Специальность не указана',
-            style: const TextStyle(fontSize: 16, color: Colors.teal),
-            textAlign: TextAlign.center,
+            displayName ?? 'Пользователь',
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 24),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('О себе', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  Text(
-                    about?.isNotEmpty == true
-                        ? about!
-                        : 'Расскажите о своём опыте, преимуществах и подходе к работе',
-                    style: TextStyle(fontSize: 16, color: about?.isNotEmpty == true ? null : Colors.grey[600]),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
+          const Text('Пользователь', style: TextStyle(fontSize: 18, color: Colors.grey)),
+          const SizedBox(height: 40),
           ElevatedButton.icon(
             onPressed: onEdit,
             icon: const Icon(Icons.edit),
@@ -80,21 +54,21 @@ class ProfileView extends StatelessWidget {
           OutlinedButton.icon(
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SpecialistReviews()),
+                MaterialPageRoute(builder: (_) => ServiceHistory()),
               );
             },
-            icon: const Icon(Icons.rate_review),
-            label: const Text('Отзывы'),
+            icon: const Icon(Icons.history),
+            label: const Text('История заказов'),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SpecialistDocuments()),
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
               );
             },
-            icon: const Icon(Icons.description),
-            label: const Text('Документы'),
+            icon: const Icon(Icons.settings),
+            label: const Text('Настройки'),
           ),
           const SizedBox(height: 40),
           OutlinedButton.icon(

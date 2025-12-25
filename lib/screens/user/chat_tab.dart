@@ -1,56 +1,44 @@
-// lib/screens/specialist/chat_tab.dart
+// lib/screens/user/chat_tab.dart
 import 'package:flutter/material.dart';
 import 'package:profi/screens/other/chat.dart';
 
-class ChatTab extends StatelessWidget {
-  const ChatTab({super.key});
 
-  // Затычки — фейковые чаты
+class UserChatTab extends StatelessWidget {
+  const UserChatTab({super.key});
+
+  // Затычки — фейковые чаты с мастерами
   static const List<Map<String, dynamic>> _fakeChats = [
     {
-      'clientId': 'client_1',
-      'clientName': 'Алексей Иванов',
-      'clientInitial': 'А',
-      'lastMessage': 'Интересует ремонт ванной комнаты. Сколько будет стоить примерно?',
+      'masterName': 'Алексей Иванов',
+      'masterInitial': 'А',
+      'lastMessage': 'Могу приехать завтра в 14:00 для замера',
       'timestamp': '14:32',
-      'unreadCount': 2,
+      'unreadCount': 0,
       'isOnline': true,
     },
     {
-      'clientId': 'client_2',
-      'clientName': 'Мария Петрова',
-      'clientInitial': 'М',
-      'lastMessage': 'Сколько стоит замена проводки в двухкомнатной квартире?',
+      'masterName': 'Дмитрий Петров',
+      'masterInitial': 'Д',
+      'lastMessage': 'Да, работаю с такими материалами. Можем обсудить детали?',
       'timestamp': 'Вчера',
-      'unreadCount': 0,
+      'unreadCount': 1,
       'isOnline': false,
     },
     {
-      'clientId': 'client_3',
-      'clientName': 'Дмитрий Сидоров',
-      'clientInitial': 'Д',
-      'lastMessage': 'Можно установить кондиционер на следующей неделе?',
+      'masterName': 'Сергей Морозов',
+      'masterInitial': 'С',
+      'lastMessage': 'Сколько примерно будет стоить ремонт кухни 10 м²?',
       'timestamp': 'Пн',
-      'unreadCount': 1,
+      'unreadCount': 3,
       'isOnline': true,
     },
     {
-      'clientId': 'client_4',
-      'clientName': 'Ольга Кузнецова',
-      'clientInitial': 'О',
-      'lastMessage': 'Спасибо за работу! Всё отлично 👏',
+      'masterName': 'Ольга Кузнецова',
+      'masterInitial': 'О',
+      'lastMessage': 'Спасибо за быстрый ремонт! Рекомендую всем 👍',
       'timestamp': '19 дек',
       'unreadCount': 0,
       'isOnline': false,
-    },
-    {
-      'clientId': 'client_5',
-      'clientName': 'Сергей Морозов',
-      'clientInitial': 'С',
-      'lastMessage': 'Когда сможете приехать посмотреть кухню?',
-      'timestamp': '18 дек',
-      'unreadCount': 3,
-      'isOnline': true,
     },
   ];
 
@@ -80,8 +68,9 @@ class ChatTab extends StatelessWidget {
                   const Text('Нет активных чатов', style: TextStyle(fontSize: 18)),
                   const SizedBox(height: 8),
                   Text(
-                    'Когда клиенты напишут — чаты появятся здесь',
+                    'Начните общение с мастером через его услугу',
                     style: TextStyle(color: Colors.grey[600]),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
@@ -98,7 +87,7 @@ class ChatTab extends StatelessWidget {
                         radius: 28,
                         backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
                         child: Text(
-                          chat['clientInitial'],
+                          chat['masterInitial'],
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -123,7 +112,7 @@ class ChatTab extends StatelessWidget {
                     ],
                   ),
                   title: Text(
-                    chat['clientName'],
+                    chat['masterName'],
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   subtitle: Text(
@@ -150,17 +139,22 @@ class ChatTab extends StatelessWidget {
                           ),
                           child: Text(
                             '${chat['unreadCount']}',
-                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                     ],
                   ),
                   onTap: () {
+                    // Переход в реальный чат с мастером
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) => ChatScreen(
-                          clientName: chat['clientName'],
-                          clientInitial: chat['clientInitial'],
+                          clientName: chat['masterName'],
+                          clientInitial: chat['masterInitial'],
                           isOnline: chat['isOnline'],
                         ),
                       ),

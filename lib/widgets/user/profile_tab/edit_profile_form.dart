@@ -1,19 +1,17 @@
-// lib/widgets/specialist/profile_tab/edit_profile_form.dart
+// lib/widgets/user/profile_tab/edit_profile_form.dart
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:profi/widgets/specialist/profile_tab/change_password_dialog.dart';
 import '../../../services/supabase_service.dart';
-import 'change_password_dialog.dart'; // Импортируем диалог
 
-typedef OnProfileSaved = Future<void> Function(String name, String? about, String? specialty, String? photoUrl);
+typedef OnProfileSaved = Future<void> Function(String name, String? photoUrl);
 
 class EditProfileForm extends StatefulWidget {
   final String initialName;
-  final String? initialAbout;
-  final String? initialSpecialty;
   final String? initialPhotoUrl;
   final OnProfileSaved onSave;
   final VoidCallback onCancel;
@@ -21,8 +19,6 @@ class EditProfileForm extends StatefulWidget {
   const EditProfileForm({
     super.key,
     required this.initialName,
-    this.initialAbout,
-    this.initialSpecialty,
     this.initialPhotoUrl,
     required this.onSave,
     required this.onCancel,
@@ -34,8 +30,6 @@ class EditProfileForm extends StatefulWidget {
 
 class _EditProfileFormState extends State<EditProfileForm> {
   late TextEditingController _nameController;
-  late TextEditingController _aboutController;
-  late TextEditingController _specialtyController;
 
   File? _newPhotoFile;
   final _picker = ImagePicker();
@@ -48,15 +42,11 @@ class _EditProfileFormState extends State<EditProfileForm> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName);
-    _aboutController = TextEditingController(text: widget.initialAbout ?? '');
-    _specialtyController = TextEditingController(text: widget.initialSpecialty ?? '');
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _aboutController.dispose();
-    _specialtyController.dispose();
     super.dispose();
   }
 
@@ -122,8 +112,6 @@ class _EditProfileFormState extends State<EditProfileForm> {
 
       await widget.onSave(
         _nameController.text.trim(),
-        _aboutController.text.trim().isEmpty ? null : _aboutController.text.trim(),
-        _specialtyController.text.trim().isEmpty ? null : _specialtyController.text.trim(),
         newPhotoUrl,
       );
     } catch (e) {
@@ -174,26 +162,6 @@ class _EditProfileFormState extends State<EditProfileForm> {
               labelText: 'Имя',
               prefixIcon: Icon(Icons.person),
               border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _specialtyController,
-            decoration: const InputDecoration(
-              labelText: 'Специальность',
-              prefixIcon: Icon(Icons.work),
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _aboutController,
-            maxLines: 6,
-            decoration: const InputDecoration(
-              labelText: 'О себе',
-              prefixIcon: Icon(Icons.info),
-              border: OutlineInputBorder(),
-              alignLabelWithHint: true,
             ),
           ),
           const SizedBox(height: 32),
