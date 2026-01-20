@@ -23,10 +23,9 @@ class AddEditServiceDialog {
     List<String> newPhotoPaths = [];
 
     final _picker = ImagePicker();
-    const int maxFileSizeBytes = 1024 * 1024; // 1 МБ
+    const int maxFileSizeBytes = 1024 * 1024; 
     const int maxPhotos = 3;
 
-    // Функция сжатия — объявлена ДО использования
     Future<File?> _compressToUnder1MB(File file) async {
       Uint8List bytes = await file.readAsBytes();
       int quality = 90;

@@ -1,4 +1,6 @@
 // lib/main.dart
+import 'package:device_preview/device_preview.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -11,16 +13,19 @@ import 'screens/specialist/specialist_home.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Загрузка .env файла
   await dotenv.load(fileName: ".env");
 
-  // Инициализация Supabase
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
-  runApp(const MainApp());
+  runApp(
+    DevicePreview(
+      enabled: !kReleaseMode, // Автоматически выключается в релизе
+      builder: (context) => const MainApp(),
+    ),
+  );
 }
 
 final supabase = Supabase.instance.client;
@@ -59,43 +64,48 @@ class MainApp extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Найди Мастера',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      home: FutureBuilder<Widget>(
-        future: _getStartingScreen(),
-        builder: (context, snapshot) {
-          if (snapshot.hasData) {
-            return snapshot.data!;
-          } else if (snapshot.hasError) {
-            return const AuthScreen();
-          }
+Widget build(BuildContext context) {
+  return MaterialApp(
+    title: 'Pro_fi',
+    debugShowCheckedModeBanner: false,
+    theme: AppTheme.lightTheme,
+    
+    // Добавленные строки для DevicePreview
+    useInheritedMediaQuery: true,
+    locale: DevicePreview.locale(context),       
+    builder: DevicePreview.appBuilder,
+    
+    home: FutureBuilder<Widget>(
+      future: _getStartingScreen(),
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          return snapshot.data!;
+        } else if (snapshot.hasError) {
+          return const AuthScreen();
+        }
 
-          // Экран загрузки при определении роли
-          return const Scaffold(
-            backgroundColor: Colors.white,
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF009999)),
-                  ),
-                  SizedBox(height: 32),
-                  Text(
-                    'Загрузка приложения...',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
-                  ),
-                ],
-              ),
+        return const Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF009999)),
+                ),
+                SizedBox(height: 32),
+                Text(
+                  'Загрузка приложения...',
+                  style: TextStyle(fontSize: 18, color: Colors.grey),
+                ),
+              ],
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
+}
 }
 
 /*
