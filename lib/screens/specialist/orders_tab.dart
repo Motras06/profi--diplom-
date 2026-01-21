@@ -1,7 +1,5 @@
 // lib/screens/specialist/orders_tab.dart
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
 import '../../services/supabase_service.dart';
 
 enum OrdersViewMode { verification, completed, blacklist }
