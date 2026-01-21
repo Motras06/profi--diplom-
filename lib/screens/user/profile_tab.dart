@@ -1,5 +1,8 @@
 // lib/widgets/user/profile_tab/profile_tab.dart
 import 'package:flutter/material.dart';
+import 'package:profi/screens/other/my_orders_screen.dart';
+import 'package:profi/screens/other/my_reviews_screen.dart';
+import 'package:profi/screens/other/settings_screen.dart';
 import 'package:profi/widgets/user/profile_tab/edit_profile_form.dart';
 import '../../../services/supabase_service.dart';
 import '../../../screens/auth/auth_screen.dart';
@@ -46,27 +49,26 @@ class _UserProfileTabState extends State<UserProfileTab> {
           .eq('id', user.id)
           .single();
 
-      _displayName = profileRes['display_name'] as String?;
-      _photoUrl = profileRes['photo_url'] as String?;
-      _role = profileRes['role'] as String?;
-      _specialty = profileRes['specialty'] as String?;
+      setState(() {
+        _displayName = profileRes['display_name'] as String?;
+        _photoUrl = profileRes['photo_url'] as String?;
+        _role = profileRes['role'] as String?;
+        _specialty = profileRes['specialty'] as String?;
+      });
 
-      // 2. Статистика (параллельные запросы можно, но для простоты последовательно)
-      // Заказы (как клиент)
+      // 2. Статистика
       final ordersRes = await supabase
           .from('orders')
           .select('count')
           .eq('user_id', user.id);
       _ordersCount = (ordersRes.firstOrNull?['count'] as int?) ?? 0;
 
-      // Сохранённые услуги
       final savedRes = await supabase
           .from('saved_services')
           .select('count')
           .eq('user_id', user.id);
       _savedServicesCount = (savedRes.firstOrNull?['count'] as int?) ?? 0;
 
-      // Отзывы (если специалист)
       if (_role == 'specialist') {
         final reviewsRes = await supabase
             .from('reviews')
@@ -77,7 +79,6 @@ class _UserProfileTabState extends State<UserProfileTab> {
         _reviewsCount = (reviewsRes['count'] as int?) ?? 0;
         _averageRating = (reviewsRes['avg'] as num?)?.toDouble() ?? 0.0;
       } else {
-        // Для клиента — отзывы, которые он оставил
         final myReviewsRes = await supabase
             .from('reviews')
             .select('count')
@@ -116,15 +117,19 @@ class _UserProfileTabState extends State<UserProfileTab> {
         _isEditing = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Профиль сохранён')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Профиль сохранён')),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка: $e')),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -139,24 +144,25 @@ class _UserProfileTabState extends State<UserProfileTab> {
     }
   }
 
+  // Переходы
   void _openSettings() {
-    // TODO: реализовать экран настроек (уведомления, приватность, язык и т.д.)
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Настройки (в разработке)')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SettingsScreen()),
     );
   }
 
   void _openMyOrders() {
-    // TODO: экран со списком заказов
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Мои заказы (в разработке)')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const MyOrdersScreen()),
     );
   }
 
   void _openMyReviews() {
-    // TODO: экран с отзывами (оставленными или полученными)
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Мои отзывы (в разработке)')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const MyReviewsScreen()),
     );
   }
 
@@ -176,141 +182,121 @@ class _UserProfileTabState extends State<UserProfileTab> {
     }
 
     return Scaffold(
-      body: SafeArea(
-        child: Stack(
+      appBar: AppBar(
+        title: const Text('Профиль'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Настройки',
+            onPressed: _openSettings,  // ← теперь в AppBar — надёжно работает
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Кнопка настроек в правом верхнем углу
-            Positioned(
-              top: 16,
-              right: 16,
-              child: IconButton(
-                icon: const Icon(Icons.settings_outlined, size: 28),
-                onPressed: _openSettings,
-                tooltip: 'Настройки',
+            // Аватар + имя + роль
+            CircleAvatar(
+              radius: 70,
+              backgroundColor: Colors.grey.shade200,
+              backgroundImage: _photoUrl != null ? NetworkImage(_photoUrl!) : null,
+              child: _photoUrl == null
+                  ? Text(
+                      (_displayName?.substring(0, 1).toUpperCase()) ?? '?',
+                      style: const TextStyle(fontSize: 60, fontWeight: FontWeight.bold),
+                    )
+                  : null,
+            ),
+
+            const SizedBox(height: 20),
+
+            Text(
+              _displayName ?? 'Имя не указано',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+
+            if (_role != null) ...[
+              const SizedBox(height: 6),
+              Chip(
+                label: Text(
+                  _role == 'specialist' ? (_specialty ?? 'Специалист') : 'Клиент',
+                ),
+                backgroundColor: _role == 'specialist' ? Colors.blue.shade100 : Colors.green.shade100,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+              ),
+            ],
+
+            const SizedBox(height: 8),
+            Text(
+              supabase.auth.currentUser?.email ?? '—',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey.shade700,
+                  ),
+            ),
+
+            const SizedBox(height: 40),
+
+            // Статистика
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _StatCard(icon: Icons.work_outline, value: '$_ordersCount', label: 'Заказов'),
+                _StatCard(
+                  icon: Icons.star_outline,
+                  value: _role == 'specialist' ? _averageRating.toStringAsFixed(1) : '$_reviewsCount',
+                  label: _role == 'specialist' ? 'Рейтинг' : 'Отзывов',
+                ),
+                _StatCard(icon: Icons.bookmark_border, value: '$_savedServicesCount', label: 'Сохранено'),
+              ],
+            ),
+
+            const SizedBox(height: 48),
+
+            // Основные действия
+            _ActionButton(
+              icon: Icons.receipt_long_outlined,
+              label: 'Мои заказы',
+              onPressed: _openMyOrders,
+            ),
+            const SizedBox(height: 16),
+
+            _ActionButton(
+              icon: Icons.rate_review_outlined,
+              label: 'Мои отзывы',
+              onPressed: _openMyReviews,
+            ),
+            const SizedBox(height: 16),
+
+            _ActionButton(
+              icon: Icons.edit,
+              label: 'Редактировать профиль',
+              onPressed: _startEditing,
+              isFilled: true,
+            ),
+            const SizedBox(height: 24),
+
+            // Выход
+            OutlinedButton.icon(
+              onPressed: _logout,
+              icon: Icon(Icons.logout, color: Colors.red.shade700),
+              label: Text(
+                'Выйти из аккаунта',
+                style: TextStyle(color: Colors.red.shade700),
+              ),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+                side: BorderSide(color: Colors.red.shade300),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
 
-            SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 60, 24, 40),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Аватар + имя + роль
-                  CircleAvatar(
-                    radius: 70,
-                    backgroundColor: Colors.grey.shade200,
-                    backgroundImage: _photoUrl != null ? NetworkImage(_photoUrl!) : null,
-                    child: _photoUrl == null
-                        ? Text(
-                            (_displayName?.substring(0, 1).toUpperCase()) ?? '?',
-                            style: const TextStyle(fontSize: 60, fontWeight: FontWeight.bold),
-                          )
-                        : null,
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  Text(
-                    _displayName ?? 'Имя не указано',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
-
-                  if (_role != null) ...[
-                    const SizedBox(height: 6),
-                    Chip(
-                      label: Text(
-                        _role == 'specialist'
-                            ? (_specialty ?? 'Специалист')
-                            : 'Клиент',
-                      ),
-                      backgroundColor: _role == 'specialist'
-                          ? Colors.blue.shade100
-                          : Colors.green.shade100,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                    ),
-                  ],
-
-                  const SizedBox(height: 8),
-                  Text(
-                    supabase.auth.currentUser?.email ?? '—',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey.shade700,
-                        ),
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  // Статистика (карточки)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _StatCard(
-                        icon: Icons.work_outline,
-                        value: '$_ordersCount',
-                        label: 'Заказов',
-                      ),
-                      _StatCard(
-                        icon: Icons.star_outline,
-                        value: _role == 'specialist'
-                            ? _averageRating.toStringAsFixed(1)
-                            : '$_reviewsCount',
-                        label: _role == 'specialist' ? 'Рейтинг' : 'Отзывов',
-                      ),
-                      _StatCard(
-                        icon: Icons.bookmark_border,
-                        value: '$_savedServicesCount',
-                        label: 'Сохранено',
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 48),
-
-                  // Основные действия
-                  _ActionButton(
-                    icon: Icons.receipt_long_outlined,
-                    label: 'Мои заказы',
-                    onPressed: _openMyOrders,
-                  ),
-                  const SizedBox(height: 16),
-
-                  _ActionButton(
-                    icon: Icons.rate_review_outlined,
-                    label: 'Мои отзывы',
-                    onPressed: _openMyReviews,
-                  ),
-                  const SizedBox(height: 16),
-
-                  _ActionButton(
-                    icon: Icons.edit,
-                    label: 'Редактировать профиль',
-                    onPressed: _startEditing,
-                    isFilled: true,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Выход
-                  OutlinedButton.icon(
-                    onPressed: _logout,
-                    icon: Icon(Icons.logout, color: Colors.red.shade700),
-                    label: Text(
-                      'Выйти из аккаунта',
-                      style: TextStyle(color: Colors.red.shade700),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(52),
-                      side: BorderSide(color: Colors.red.shade300),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-
-                  const SizedBox(height: 40),
-                ],
-              ),
-            ),
+            const SizedBox(height: 40),
           ],
         ),
       ),
@@ -318,18 +304,13 @@ class _UserProfileTabState extends State<UserProfileTab> {
   }
 }
 
-// Вспомогательные виджеты
-
+// Вспомогательные виджеты (без изменений)
 class _StatCard extends StatelessWidget {
   final IconData icon;
   final String value;
   final String label;
 
-  const _StatCard({
-    required this.icon,
-    required this.value,
-    required this.label,
-  });
+  const _StatCard({required this.icon, required this.value, required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -341,14 +322,8 @@ class _StatCard extends StatelessWidget {
           child: Icon(icon, color: Theme.of(context).colorScheme.primary),
         ),
         const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        Text(
-          label,
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-        ),
+        Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
       ],
     );
   }
