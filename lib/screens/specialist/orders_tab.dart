@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
 
-enum OrdersViewMode { verification, completed, blacklist }
+enum OrdersViewMode { verification, accepted, completed, blacklist }
 
 class OrdersTab extends StatefulWidget {
   const OrdersTab({super.key});
@@ -18,11 +18,11 @@ class _OrdersTabState extends State<OrdersTab>
   OrdersViewMode _currentMode = OrdersViewMode.verification;
 
   List<Map<String, dynamic>> _pendingOrders = [];
+  List<Map<String, dynamic>> _acceptedOrders = [];
   List<Map<String, dynamic>> _completedOrders = [];
   List<Map<String, dynamic>> _blacklistedUsers = [];
 
   bool _isLoading = true;
-
   String? _specialistId;
 
   @override
@@ -31,7 +31,7 @@ class _OrdersTabState extends State<OrdersTab>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) return;
       setState(() {
@@ -40,7 +40,17 @@ class _OrdersTabState extends State<OrdersTab>
     });
 
     _specialistId = supabase.auth.currentUser?.id;
-    _loadData();
+    if (_specialistId != null) {
+      _loadData();
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Не авторизован')),
+          );
+        }
+      });
+    }
   }
 
   @override
@@ -54,40 +64,67 @@ class _OrdersTabState extends State<OrdersTab>
     setState(() => _isLoading = true);
 
     try {
-      if (_specialistId == null) throw 'Не авторизован';
-
       final results = await Future.wait([
+        // 0: Верификация (pending)
         supabase
             .from('orders')
-            .select('id, created_at, user_id, service_id, status, profiles!user_id(display_name, photo_url), services(name, price)')
+            .select('''
+              id, created_at, user_id, service_id, status,
+              profiles!user_id (display_name, photo_url),
+              services (name, price)
+            ''')
             .eq('specialist_id', _specialistId!)
             .eq('status', 'pending')
             .order('created_at', ascending: false),
 
+        // 1: Одобренные (accepted)
         supabase
             .from('orders')
-            .select('id, created_at, user_id, service_id, status, profiles!user_id(display_name, photo_url), services(name, price)')
+            .select('''
+              id, created_at, user_id, service_id, status,
+              profiles!user_id (display_name, photo_url),
+              services (name, price)
+            ''')
+            .eq('specialist_id', _specialistId!)
+            .eq('status', 'accepted')
+            .order('created_at', ascending: false),
+
+        // 2: Выполненные (completed)
+        supabase
+            .from('orders')
+            .select('''
+              id, created_at, user_id, service_id, status,
+              profiles!user_id (display_name, photo_url),
+              services (name, price)
+            ''')
             .eq('specialist_id', _specialistId!)
             .eq('status', 'completed')
             .order('created_at', ascending: false),
 
+        // 3: Чёрный список
         supabase
             .from('blacklists')
-            .select('blacklisted_user_id, reason, profiles!blacklisted_user_id(display_name, photo_url)')
-            .eq('specialist_id', _specialistId!),
+            .select('''
+              blacklisted_user_id, reason, created_at,
+              profiles!blacklisted_user_id (display_name, photo_url)
+            ''')
+            .eq('specialist_id', _specialistId!)
+            .order('created_at', ascending: false),
       ]);
 
       if (!mounted) return;
 
       setState(() {
-        _pendingOrders = List<Map<String, dynamic>>.from(results[0] as List);
-        _completedOrders = List<Map<String, dynamic>>.from(results[1] as List);
-        _blacklistedUsers = List<Map<String, dynamic>>.from(results[2] as List);
+        _pendingOrders   = List<Map<String, dynamic>>.from(results[0]);
+        _acceptedOrders  = List<Map<String, dynamic>>.from(results[1]);
+        _completedOrders = List<Map<String, dynamic>>.from(results[2]);
+        _blacklistedUsers = List<Map<String, dynamic>>.from(results[3]);
       });
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('Ошибка загрузки заказов: $e\n$stack');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки: $e')),
+          SnackBar(content: Text('Ошибка загрузки: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -95,171 +132,205 @@ class _OrdersTabState extends State<OrdersTab>
     }
   }
 
-  // Затычки — добавляются в конец реальных списков
-  List<Map<String, dynamic>> get _displayPending =>
-      [..._pendingOrders, ..._fakePendingOrders()];
+  // ── Действия ──────────────────────────────────────────────────────────────
 
-  List<Map<String, dynamic>> get _displayCompleted =>
-      [..._completedOrders, ..._fakeCompletedOrders()];
+  Future<void> _acceptOrder(int orderId) async {
+    try {
+      await supabase
+          .from('orders')
+          .update({'status': 'accepted'})
+          .eq('id', orderId)
+          .eq('specialist_id', _specialistId!);
 
-  List<Map<String, dynamic>> get _displayBlacklisted =>
-      [..._blacklistedUsers, ..._fakeBlacklistedUsers()];
-
-  List<Map<String, dynamic>> _fakePendingOrders() => [
-        {
-          'id': -1, // Отрицательный ID, чтобы не конфликтовать
-          'profiles': {'display_name': 'Алексей Иванов', 'photo_url': null},
-          'services': {'name': 'Ремонт ванной комнаты', 'price': 25000},
-        },
-        {
-          'id': -2,
-          'profiles': {'display_name': 'Мария Петрова', 'photo_url': null},
-          'services': {'name': 'Замена электропроводки', 'price': null},
-        },
-        {
-          'id': -3,
-          'profiles': {'display_name': 'Дмитрий Сидоров', 'photo_url': null},
-          'services': {'name': 'Установка кондиционера', 'price': 18000},
-        },
-      ];
-
-  List<Map<String, dynamic>> _fakeCompletedOrders() => [
-        {
-          'id': -101,
-          'profiles': {'display_name': 'Ольга Кузнецова', 'photo_url': null},
-          'services': {'name': 'Покраска стен', 'price': 12000},
-        },
-        {
-          'id': -102,
-          'profiles': {'display_name': 'Сергей Морозов', 'photo_url': null},
-          'services': {'name': 'Сборка кухонного гарнитура', 'price': 8000},
-        },
-        {
-          'id': -103,
-          'profiles': {'display_name': 'Екатерина Волкова', 'photo_url': null},
-          'services': {'name': 'Ремонт сантехники', 'price': 4500},
-        },
-      ];
-
-  List<Map<String, dynamic>> _fakeBlacklistedUsers() => [
-        {
-          'blacklisted_user_id': 'fake-bad-1',
-          'reason': 'Не вышел на связь после одобрения',
-          'profiles': {'display_name': 'Виктор Зайцев', 'photo_url': null},
-        },
-        {
-          'blacklisted_user_id': 'fake-bad-2',
-          'reason': 'Отказался от оплаты',
-          'profiles': {'display_name': 'Игорь Козлов', 'photo_url': null},
-        },
-      ];
-
-  // Кнопки работают как демо
-  Future<void> _approveOrder(int orderId) async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Заказ одобрен (демо-режим)')),
-    );
-  }
-
-  Future<void> _rejectOrder(int orderId, String userId) async {
-    final reasonCtrl = TextEditingController();
-
-    final reject = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Отклонить заказ'),
-        content: TextField(
-          controller: reasonCtrl,
-          decoration: const InputDecoration(
-            labelText: 'Причина отклонения (необязательно)',
-            border: OutlineInputBorder(),
-          ),
-          maxLines: 3,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Отмена')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Отклонить'),
-          ),
-        ],
-      ),
-    );
-
-    if (reject == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Заказ отклонён (демо-режим)')),
-      );
-      if (reasonCtrl.text.trim().isNotEmpty) {
+      await _loadData();
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Клиент добавлен в чёрный список (демо-режим)')),
+          const SnackBar(content: Text('Заказ принят')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
         );
       }
     }
   }
 
-  Future<void> _removeFromBlacklist(String userId) async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Клиент удалён из чёрного списка (демо-режим)')),
+  Future<void> _rejectOrder(int orderId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Отклонить заказ'),
+        content: const Text('Заказ будет удалён. Продолжить?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
     );
+
+    if (confirmed != true) return;
+
+    try {
+      await supabase
+          .from('orders')
+          .delete()
+          .eq('id', orderId)
+          .eq('specialist_id', _specialistId!);
+
+      await _loadData();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Заказ отклонён и удалён')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
-  Widget _buildOrderCard(Map<String, dynamic> order, {required bool isPending}) {
-    final user = order['profiles'] ?? {'display_name': 'Клиент', 'photo_url': null};
-    final service = order['services'] ?? {'name': 'Услуга', 'price': null};
+  Future<void> _completeOrder(int orderId) async {
+    try {
+      await supabase
+          .from('orders')
+          .update({'status': 'completed'})
+          .eq('id', orderId)
+          .eq('specialist_id', _specialistId!);
+
+      await _loadData();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Заказ завершён')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _removeFromBlacklist(String blacklistedUserId) async {
+    try {
+      await supabase
+          .from('blacklists')
+          .delete()
+          .eq('specialist_id', _specialistId!)
+          .eq('blacklisted_user_id', blacklistedUserId);
+
+      await _loadData();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Клиент удалён из чёрного списка')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  // ── Карточки ──────────────────────────────────────────────────────────────
+
+  Widget _buildOrderCard(Map<String, dynamic> order, {
+    required String mode,
+  }) {
+    final user = order['profiles'] as Map<String, dynamic>? ?? {};
+    final service = order['services'] as Map<String, dynamic>? ?? {};
+
+    final displayName = user['display_name'] as String? ?? 'Клиент';
+    final photoUrl = user['photo_url'] as String?;
+    final serviceName = service['name'] as String? ?? 'Услуга';
+    final price = service['price'] as num?;
+
+    final createdAt = DateTime.parse(order['created_at'] as String);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         leading: CircleAvatar(
-          child: Text((user['display_name'] as String?)?.substring(0, 1).toUpperCase() ?? '?'),
+          backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+          child: photoUrl == null ? Text(displayName[0].toUpperCase()) : null,
         ),
-        title: Text(user['display_name'] ?? 'Неизвестный клиент'),
+        title: Text(displayName, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(service['name'] ?? 'Услуга удалена'),
-            if (service['price'] != null) Text('Цена: ${service['price']} ₽'),
+            Text(serviceName),
+            if (price != null) Text('Цена: $price ₽'),
+            Text(
+              'Создан: ${createdAt.day}.${createdAt.month}.${createdAt.year} ${createdAt.hour}:${createdAt.minute.toString().padLeft(2, '0')}',
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
           ],
         ),
-        trailing: isPending
+        trailing: mode == 'verification'
             ? Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.check, color: Colors.green),
-                    onPressed: () => _approveOrder(order['id'] ?? 0),
-                    tooltip: 'Одобрить',
+                    icon: const Icon(Icons.check_circle_outline, color: Colors.green),
+                    onPressed: () => _acceptOrder(order['id'] as int),
+                    tooltip: 'Принять',
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.red),
-                    onPressed: () => _rejectOrder(order['id'] ?? 0, user['id'] ?? ''),
+                    icon: const Icon(Icons.cancel_outlined, color: Colors.red),
+                    onPressed: () => _rejectOrder(order['id'] as int),
                     tooltip: 'Отклонить',
                   ),
                 ],
               )
-            : const Icon(Icons.check_circle, color: Colors.green),
+            : mode == 'accepted'
+                ? IconButton(
+                    icon: const Icon(Icons.done_all, color: Colors.blue),
+                    onPressed: () => _completeOrder(order['id'] as int),
+                    tooltip: 'Завершить',
+                  )
+                : const Icon(Icons.check_circle, color: Colors.green, size: 32),
       ),
     );
   }
 
   Widget _buildBlacklistCard(Map<String, dynamic> entry) {
-    final user = entry['profiles'] ?? {'display_name': 'Клиент', 'photo_url': null};
+    final user = entry['profiles'] as Map<String, dynamic>? ?? {};
+    final displayName = user['display_name'] as String? ?? 'Клиент';
+    final photoUrl = user['photo_url'] as String?;
+    final reason = entry['reason'] as String?;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         leading: CircleAvatar(
-          child: Text((user['display_name'] as String?)?.substring(0, 1).toUpperCase() ?? '?'),
+          backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+          child: photoUrl == null ? Text(displayName[0].toUpperCase()) : null,
         ),
-        title: Text(user['display_name'] ?? 'Неизвестный'),
-        subtitle: entry['reason'] != null
-            ? Text('Причина: ${entry['reason']}')
-            : const Text('Без причины'),
+        title: Text(displayName, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: reason != null
+            ? Text('Причина: $reason', style: TextStyle(color: Colors.grey[700]))
+            : const Text('Причина не указана'),
         trailing: IconButton(
           icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-          onPressed: () => _removeFromBlacklist(entry['blacklisted_user_id'] ?? ''),
+          onPressed: () => _removeFromBlacklist(entry['blacklisted_user_id'] as String),
+          tooltip: 'Удалить из чёрного списка',
         ),
       ),
     );
@@ -269,17 +340,25 @@ class _OrdersTabState extends State<OrdersTab>
   Widget build(BuildContext context) {
     super.build(context);
 
-    final List<Widget> currentList;
+    List<Widget> currentList = [];
+    String emptyText = '';
 
     switch (_currentMode) {
       case OrdersViewMode.verification:
-        currentList = _displayPending.map((o) => _buildOrderCard(o, isPending: true)).toList();
+        currentList = _pendingOrders.map((o) => _buildOrderCard(o, mode: 'verification')).toList();
+        emptyText = 'Нет заказов на верификацию';
+        break;
+      case OrdersViewMode.accepted:
+        currentList = _acceptedOrders.map((o) => _buildOrderCard(o, mode: 'accepted')).toList();
+        emptyText = 'Нет одобренных заказов';
         break;
       case OrdersViewMode.completed:
-        currentList = _displayCompleted.map((o) => _buildOrderCard(o, isPending: false)).toList();
+        currentList = _completedOrders.map((o) => _buildOrderCard(o, mode: 'completed')).toList();
+        emptyText = 'Нет выполненных заказов';
         break;
       case OrdersViewMode.blacklist:
-        currentList = _displayBlacklisted.map(_buildBlacklistCard).toList();
+        currentList = _blacklistedUsers.map(_buildBlacklistCard).toList();
+        emptyText = 'Чёрный список пуст';
         break;
     }
 
@@ -288,12 +367,10 @@ class _OrdersTabState extends State<OrdersTab>
         title: const Text('Заказы'),
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Theme.of(context).colorScheme.onPrimary,
-          unselectedLabelColor: Colors.grey[600],
-          indicatorColor: Theme.of(context).colorScheme.onPrimary,
-          indicatorWeight: 3,
+          isScrollable: true,
           tabs: const [
             Tab(text: 'Верификация'),
+            Tab(text: 'Одобренные'),
             Tab(text: 'Выполненные'),
             Tab(text: 'Чёрный список'),
           ],
@@ -303,12 +380,17 @@ class _OrdersTabState extends State<OrdersTab>
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadData,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: currentList.isEmpty
-                    ? [const Center(child: Text('Нет данных'))]
-                    : currentList,
-              ),
+              child: currentList.isEmpty
+                  ? Center(
+                      child: Text(
+                        emptyText,
+                        style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                      ),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: currentList,
+                    ),
             ),
     );
   }

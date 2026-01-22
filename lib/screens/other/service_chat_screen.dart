@@ -1,4 +1,4 @@
-// lib/screens/other/chat_screen.dart
+// lib/screens/other/chat_screen.dart (или lib/screens/specialist/chat_screen.dart)
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
@@ -28,6 +28,8 @@ class _ServiceChatScreenState extends State<ServiceChatScreen> {
   List<Map<String, dynamic>> _messages = [];
   bool _isLoading = true;
 
+  RealtimeChannel? _channel; // сохраняем канал для отписки
+
   @override
   void initState() {
     super.initState();
@@ -47,75 +49,78 @@ class _ServiceChatScreenState extends State<ServiceChatScreen> {
       return;
     }
 
-    // Загружаем начальные сообщения (последние 50, например)
+    debugPrint('Чат открыт: user=$_currentUserId → specialist=$_specialistId');
+
+    // 1. Загружаем историю
     await _loadInitialMessages();
 
-    // Подписываемся на новые сообщения в обоих направлениях
-    supabase
+    // 2. Подписка на realtime (один канал + фильтрация внутри)
+    _channel = supabase
         .channel('chat:${_currentUserId}_$_specialistId')
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'chat_messages',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'sender_id',
-            value: _currentUserId,
-          ),
           callback: (payload) {
-            if (payload.newRecord['receiver_id'] == _specialistId) {
-              _addMessage(payload.newRecord);
-            }
-          },
-        )
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'chat_messages',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'sender_id',
-            value: _specialistId,
-          ),
-          callback: (payload) {
-            if (payload.newRecord['receiver_id'] == _currentUserId) {
-              _addMessage(payload.newRecord);
+            final newMsg = payload.newRecord;
+            final sender = newMsg['sender_id'] as String?;
+            final receiver = newMsg['receiver_id'] as String?;
+
+            // Только сообщения между нами
+            if ((sender == _currentUserId && receiver == _specialistId) ||
+                (sender == _specialistId && receiver == _currentUserId)) {
+              
+              // Добавляем только если id ещё нет в списке
+              if (!_messages.any((m) => m['id'] == newMsg['id'])) {
+                debugPrint('Realtime: добавлено сообщение id=${newMsg['id']} от $sender');
+                if (mounted) {
+                  setState(() {
+                    _messages.add(newMsg);
+                  });
+                  _scrollToBottom();
+                }
+              } else {
+                debugPrint('Realtime: сообщение id=${newMsg['id']} уже существует → пропускаем');
+              }
             }
           },
         )
         .subscribe();
 
-    setState(() => _isLoading = false);
+    if (mounted) setState(() => _isLoading = false);
   }
 
   Future<void> _loadInitialMessages() async {
-    final messages = await supabase
-        .from('chat_messages')
-        .select()
-        .or(
-          'and(sender_id.eq.$_currentUserId,receiver_id.eq.$_specialistId),'
-          'and(sender_id.eq.$_specialistId,receiver_id.eq.$_currentUserId)'
-        )
-        .order('timestamp', ascending: true)
-        .limit(50); // можно увеличить или сделать пагинацию
+    debugPrint('Загрузка истории сообщений');
+    try {
+      final messages = await supabase
+          .from('chat_messages')
+          .select()
+          .or(
+            'and(sender_id.eq.$_currentUserId,receiver_id.eq.$_specialistId),'
+            'and(sender_id.eq.$_specialistId,receiver_id.eq.$_currentUserId)',
+          )
+          .order('timestamp', ascending: true)
+          .limit(100);
 
-    setState(() {
-      _messages = List<Map<String, dynamic>>.from(messages);
-    });
+      debugPrint('История загружена: ${messages.length} сообщений');
 
-    _scrollToBottom(animate: false);
-  }
-
-  void _addMessage(Map<String, dynamic> newMsg) {
-    setState(() {
-      _messages.add(newMsg);
-    });
-    _scrollToBottom();
+      if (mounted) {
+        setState(() {
+          _messages = List<Map<String, dynamic>>.from(messages);
+        });
+        _scrollToBottom(animate: false);
+      }
+    } catch (e, stack) {
+      debugPrint('Ошибка загрузки истории: $e\n$stack');
+    }
   }
 
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
+
+    debugPrint('Отправка сообщения: "$text"');
 
     try {
       await supabase.from('chat_messages').insert({
@@ -127,8 +132,9 @@ class _ServiceChatScreenState extends State<ServiceChatScreen> {
       });
 
       _messageController.clear();
-      // сообщение придёт через realtime
-    } catch (e) {
+      // Сообщение придёт через realtime и добавится один раз
+    } catch (e, stack) {
+      debugPrint('Ошибка отправки: $e\n$stack');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Ошибка отправки: $e')),
@@ -139,7 +145,7 @@ class _ServiceChatScreenState extends State<ServiceChatScreen> {
 
   void _scrollToBottom({bool animate = true}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scrollController.hasClients) return;
+      if (!mounted || !_scrollController.hasClients) return;
       final position = _scrollController.position.maxScrollExtent;
       if (animate) {
         _scrollController.animateTo(
@@ -155,8 +161,12 @@ class _ServiceChatScreenState extends State<ServiceChatScreen> {
 
   String _formatTime(String? timestamp) {
     if (timestamp == null) return '';
-    final date = DateTime.parse(timestamp).toLocal();
-    return DateFormat('HH:mm').format(date);
+    try {
+      final date = DateTime.parse(timestamp).toLocal();
+      return DateFormat('HH:mm').format(date);
+    } catch (_) {
+      return '';
+    }
   }
 
   @override
@@ -240,7 +250,6 @@ class _ServiceChatScreenState extends State<ServiceChatScreen> {
                     },
                   ),
                 ),
-
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: Row(
@@ -276,6 +285,10 @@ class _ServiceChatScreenState extends State<ServiceChatScreen> {
 
   @override
   void dispose() {
+    // Самое важное — отписываемся от канала!
+    _channel?.unsubscribe();
+    debugPrint('dispose: отписка от realtime-канала выполнена');
+
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();

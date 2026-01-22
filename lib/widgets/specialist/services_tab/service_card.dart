@@ -1,7 +1,6 @@
 // lib/widgets/services_tab/service_card.dart
 import 'package:flutter/material.dart';
-
-import '/../screens/other/service_screen.dart';
+import 'package:profi/screens/other/view_for_specialist.dart';
 
 class ServiceCard extends StatelessWidget {
   final Map<String, dynamic> service;
@@ -25,9 +24,10 @@ class ServiceCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () {
+          // Заменили ServiceScreen на SpecialistServiceScreen
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => ServiceScreen(service: service),
+              builder: (context) => SpecialistServiceScreen(service: service),
             ),
           );
         },
@@ -62,7 +62,7 @@ class ServiceCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        service['name'],
+                        service['name'] ?? 'Без названия',
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
@@ -89,7 +89,7 @@ class ServiceCard extends StatelessWidget {
               ],
             ),
 
-            // Bottom overlay с PopupMenuButton
+            // Bottom overlay с PopupMenuButton (редактировать/удалить)
             Positioned(
               bottom: 8,
               right: 8,
