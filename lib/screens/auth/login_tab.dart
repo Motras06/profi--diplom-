@@ -1,5 +1,6 @@
 // lib/screens/auth/login_tab.dart
 import 'package:flutter/material.dart';
+import 'package:profi/screens/admin/admin_home.dart';
 import 'package:profi/screens/specialist/specialist_home.dart';
 import 'package:profi/screens/user/user_home.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -36,50 +37,91 @@ class _LoginTabState extends State<LoginTab> {
         await _navigateToHome();
       }
     } on AuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _navigateToHome() async {
-    final user = supabase.auth.currentUser;
-    if (user == null) {
-      _goToUserHome('Гость');
-      return;
-    }
+  final user = supabase.auth.currentUser;
+  if (user == null) {
+    _goToUserHome('Гость');
+    return;
+  }
 
-    try {
-      final profile = await supabase
-          .from('profiles')
-          .select('role, display_name')
-          .eq('id', user.id)
-          .single();
+  try {
+    final profileData = await supabase
+        .from('profiles')
+        .select('role, display_name')
+        .eq('id', user.id)
+        .maybeSingle()
+        .timeout(const Duration(seconds: 5));
 
-      final role = profile['role'] as String;
-      final name = profile['display_name'] as String;
+    String role = 'user';
+    String displayName = user.email?.split('@').first ?? 'Пользователь';
 
-      if (role == 'specialist') {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => SpecialistHome(displayName: name)),
-        );
-      } else {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => UserHome(displayName: name)),
-        );
+    if (profileData != null) {
+      final rawRole = profileData['role'] as String?;
+      role = (rawRole ?? 'user').trim().toLowerCase();
+      final nameFromDb = profileData['display_name'] as String?;
+      if (nameFromDb != null && nameFromDb.isNotEmpty) {
+        displayName = nameFromDb;
       }
-    } catch (e) {
-      _goToUserHome('Пользователь');
+    } else {
+      // Профиля нет в базе — можно логировать или создать базовый профиль
+      // (но лучше создавать профиль при регистрации, а не здесь)
+      debugPrint('Профиль не найден для uid: ${user.id}');
+    }
+
+    Widget destination;
+
+    switch (role) {
+      case 'admin':
+      case 'administrator':
+        destination = AdminHome(displayName: displayName);
+        break;
+
+      case 'specialist':
+      case 'master':
+        destination = SpecialistHome(displayName: displayName);
+        break;
+
+      default:
+        destination = UserHome(displayName: displayName);
+    }
+
+    if (!mounted) return;
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => destination),
+    );
+  } catch (e, stackTrace) {
+    debugPrint('Ошибка при определении роли:\n$e\n$stackTrace');
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Не удалось загрузить данные профиля. Вход как обычный пользователь.'),
+          duration: Duration(seconds: 4),
+        ),
+      );
+
+      _goToUserHome(user.email?.split('@').first ?? 'Пользователь');
     }
   }
+}
 
-  void _goToUserHome(String name) {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => UserHome(displayName: name)),
-    );
-  }
+void _goToUserHome(String name) {
+  if (!mounted) return;
+  Navigator.of(context).pushReplacement(
+    MaterialPageRoute(
+      builder: (_) => UserHome(displayName: name),
+    ),
+  );
+}
 
   @override
   void dispose() {
@@ -115,7 +157,9 @@ class _LoginTabState extends State<LoginTab> {
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                    _isPasswordVisible
+                        ? Icons.visibility
+                        : Icons.visibility_off,
                     color: Colors.grey,
                   ),
                   onPressed: () {
@@ -129,7 +173,9 @@ class _LoginTabState extends State<LoginTab> {
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: _isLoading ? null : _loginAndNavigate,
-              style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+              ),
               child: _isLoading
                   ? const CircularProgressIndicator(color: Colors.white)
                   : const Text('Войти'),
