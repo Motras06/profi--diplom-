@@ -1,7 +1,8 @@
+// lib/widgets/user/main_tab/main_tab_filters_bottom_sheet.dart
 import 'package:flutter/material.dart';
 import '../../../services/service_service.dart';
 
-class MainTabFiltersBottomSheet extends StatelessWidget {
+class MainTabFiltersBottomSheet extends StatefulWidget {
   final ServiceService serviceService;
   final VoidCallback onApply;
 
@@ -12,177 +13,297 @@ class MainTabFiltersBottomSheet extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final minPriceCtrl = TextEditingController(
-      text: serviceService.minPrice?.toStringAsFixed(0) ?? '',
+  State<MainTabFiltersBottomSheet> createState() => _MainTabFiltersBottomSheetState();
+}
+
+class _MainTabFiltersBottomSheetState extends State<MainTabFiltersBottomSheet> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  late final TextEditingController _minPriceCtrl;
+  late final TextEditingController _maxPriceCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _minPriceCtrl = TextEditingController(
+      text: widget.serviceService.minPrice?.toStringAsFixed(0) ?? '',
     );
-    final maxPriceCtrl = TextEditingController(
-      text: serviceService.maxPrice?.toStringAsFixed(0) ?? '',
+    _maxPriceCtrl = TextEditingController(
+      text: widget.serviceService.maxPrice?.toStringAsFixed(0) ?? '',
     );
 
-    return StatefulBuilder(
-      builder: (context, setModalState) => Container(
-        height: MediaQuery.of(context).size.height * 0.82,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            // drag handle + заголовок
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: SizedBox(
-                width: 40,
-                height: 5,
-                child: DecoratedBox(
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0.0, 0.30),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+
+    // Запуск анимации сразу
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _minPriceCtrl.dispose();
+    _maxPriceCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.85,
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)), // M3-стандарт
+            boxShadow: [
+              BoxShadow(
+                color: colorScheme.shadow.withOpacity(0.15),
+                blurRadius: 16,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Drag handle — M3 стиль
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Container(
+                  width: 40,
+                  height: 5,
                   decoration: BoxDecoration(
-                    color: Colors.grey,
-                    borderRadius: BorderRadius.all(Radius.circular(10)),
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
               ),
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: Text(
-                'Фильтры и сортировка',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+
+              // Заголовок — titleLarge
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                child: Text(
+                  'Фильтры и сортировка',
+                  style: textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
               ),
-            ),
-            const Divider(height: 1),
 
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  const Text('Сортировка', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  _buildSortChip('По новизне', serviceService.sortBy == 'newest', setModalState, context),
-                  _buildSortChip('По цене (дешевле)', serviceService.sortBy == 'price_asc', setModalState, context),
-                  _buildSortChip('По цене (дороже)', serviceService.sortBy == 'price_desc', setModalState, context),
-                  _buildSortChip('По рейтингу', serviceService.sortBy == 'rating_desc', setModalState, context),
+              const Divider(height: 1),
 
-                  const SizedBox(height: 24),
-                  const Text('Диапазон цены (BYN)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: minPriceCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: _inputDeco('От'),
-                        ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(24),
+                  children: [
+                    // Сортировка — headlineSmall + chips
+                    Text(
+                      'Сортировка',
+                      style: textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextField(
-                          controller: maxPriceCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: _inputDeco('До'),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        _buildSortChip('По новизне', 'newest'),
+                        _buildSortChip('По цене (дешевле)', 'price_asc'),
+                        _buildSortChip('По цене (дороже)', 'price_desc'),
+                        _buildSortChip('По рейтингу', 'rating_desc'),
+                      ],
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // Диапазон цены
+                    Text(
+                      'Диапазон цены (BYN)',
+                      style: textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _minPriceCtrl,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: 'От',
+                              filled: true,
+                              fillColor: colorScheme.surfaceContainerHighest,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextField(
+                            controller: _maxPriceCtrl,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: 'До',
+                              filled: true,
+                              fillColor: colorScheme.surfaceContainerHighest,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
 
-                  const SizedBox(height: 24),
-                  const Text('Специальность', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: serviceService.availableSpecialties.map((spec) {
-                      final selected = serviceService.selectedSpecialties.contains(spec);
-                      return FilterChip(
-                        label: Text(spec),
-                        selected: selected,
-                        onSelected: (v) {
-                          setModalState(() {
-                            serviceService.toggleSpecialty(spec, v);
-                          });
-                        },
-                        selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
-                        checkmarkColor: Theme.of(context).primaryColor,
-                      );
-                    }).toList(),
-                  ),
+                    const SizedBox(height: 32),
 
-                  const SizedBox(height: 32),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            setModalState(() {
-                              serviceService.resetFilters();
-                              minPriceCtrl.clear();
-                              maxPriceCtrl.clear();
+                    // Специальность — chips
+                    Text(
+                      'Специальность',
+                      style: textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: widget.serviceService.availableSpecialties.map((spec) {
+                        final selected = widget.serviceService.selectedSpecialties.contains(spec);
+                        return FilterChip(
+                          label: Text(spec),
+                          selected: selected,
+                          onSelected: (v) {
+                            setState(() {
+                              widget.serviceService.toggleSpecialty(spec, v);
                             });
                           },
-                          child: const Text('Сбросить'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            serviceService.updatePriceRange(
-                              double.tryParse(minPriceCtrl.text),
-                              double.tryParse(maxPriceCtrl.text),
-                            );
-                            Navigator.pop(context);
-                            onApply();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 52),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          selectedColor: colorScheme.primaryContainer,
+                          checkmarkColor: colorScheme.onPrimaryContainer,
+                          backgroundColor: colorScheme.surfaceContainerHighest,
+                          labelStyle: TextStyle(
+                            color: selected ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
                           ),
-                          child: const Text('Применить', style: TextStyle(fontSize: 16)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        );
+                      }).toList(),
+                    ),
+
+                    const SizedBox(height: 48),
+
+                    // Кнопки действий
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              setState(() {
+                                widget.serviceService.resetFilters();
+                                _minPriceCtrl.clear();
+                                _maxPriceCtrl.clear();
+                              });
+                            },
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: colorScheme.outline),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: Text(
+                              'Сбросить',
+                              style: textTheme.labelLarge?.copyWith(color: colorScheme.primary),
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: () {
+                              widget.serviceService.updatePriceRange(
+                                double.tryParse(_minPriceCtrl.text),
+                                double.tryParse(_maxPriceCtrl.text),
+                              );
+                              Navigator.pop(context);
+                              widget.onApply();
+                            },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: colorScheme.primary,
+                              foregroundColor: colorScheme.onPrimary,
+                              minimumSize: const Size(double.infinity, 56),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              'Применить',
+                              style: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  InputDecoration _inputDeco(String label) {
-    return InputDecoration(
-      labelText: label,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-    );
-  }
+  Widget _buildSortChip(String label, String value) {
+    final selected = widget.serviceService.sortBy == value;
+    final colorScheme = Theme.of(context).colorScheme;
 
-  Widget _buildSortChip(String label, bool isSelected, StateSetter setModalState, BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: isSelected,
-        onSelected: (selected) {
-          if (selected) {
-            setModalState(() {
-              serviceService.updateSort(
-                label == 'По новизне' ? 'newest' :
-                label == 'По цене (дешевле)' ? 'price_asc' :
-                label == 'По цене (дороже)' ? 'price_desc' : 'rating_desc',
-              );
-            });
-          }
-        },
-        selectedColor: Theme.of(context).primaryColor.withOpacity(0.15),
-        labelStyle: TextStyle(
-          color: isSelected ? Theme.of(context).primaryColor : null,
-          fontWeight: isSelected ? FontWeight.w600 : null,
-        ),
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (sel) {
+        if (sel) {
+          setState(() {
+            widget.serviceService.updateSort(value);
+          });
+        }
+      },
+      selectedColor: colorScheme.primaryContainer,
+      backgroundColor: colorScheme.surfaceContainerHighest,
+      labelStyle: TextStyle(
+        color: selected ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
+        fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
       ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     );
   }
 }

@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:open_file/open_file.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../services/supabase_service.dart';
@@ -158,7 +158,7 @@ class _SpecialistDocumentsState extends State<SpecialistDocuments> {
       final dio = Dio();
       await dio.download(signedUrl, savePath);
 
-      final openResult = await OpenFile.open(savePath);
+      final openResult = await OpenFilex.open(savePath);
       if (openResult.type != ResultType.done) {
         throw Exception(openResult.message);
       }

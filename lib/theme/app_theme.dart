@@ -1,22 +1,18 @@
 // lib/theme/app_theme.dart
-
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // Основные цвета приложения — теперь в фиолетовой гамме
-  // Фиолетовый выбран как более уникальный и современный цвет для приложения по поиску наемных рабочих:
-  // - Primary: Глубокий индиго-фиолетовый (#6A1B9A или близкий) — символизирует креативность, доверие, инновации и премиум-подход.
-  // - Primary Dark: Темный фиолетовый (#4A148C) — для акцентов и темной темы.
-  // - Primary Light: Светлый фиолетовый (#9C27B0 / #AB47BC) — для выделений, hover и светлых акцентов.
-  // - Accent: Яркий теплый фиолетовый/пурпурный (#AB47BC) или зеленоватый акцент для действий (но здесь оставим фиолетовый тон для цельности).
-  //   Альтернативно — мягкий зеленый (#66BB6A) для "нанять/успех", но чтобы сохранить фиолетовую тему — используем контрастный teal или сохраняем фиолет.
-  //   Для баланса добавим мягкий зеленый акцент (#4CAF50 → #66BB6A для свежести).
-  // Это выглядит свежо, профессионально и выделяется на фоне типичных синих приложений.
-
-  static const Color primary = Color(0xFF6A1B9A);       // Глубокий фиолетовый (основной)
-  static const Color primaryDark = Color(0xFF4A148C);   // Очень темный фиолетовый
-  static const Color primaryLight = Color(0xFFAB47BC);  // Светлый яркий фиолетовый
-  static const Color accent = Color(0xFF66BB6A);        // Свежий зеленый акцент (для успеха, кнопок "откликнуться", "нанять")
+  // Аквамариновая палитра — свежая, современная и энергичная
+  // Primary: #00BFA5 — яркий аквамарин, символизирует чистоту, доверие и профессионализм
+  // Primary Dark: #009688 — глубокий бирюзовый для акцентов
+  // Primary Light: #4DD0E1 — светлый и воздушный для выделений
+  // Accent: #66BB6A — мягкий зелёный для позитивных действий (можно заменить на #26A69A)
+  static const Color primary = Color(0xFF00BFA5); // Основной аквамарин
+  static const Color primaryDark = Color(0xFF009688); // Тёмный бирюзовый
+  static const Color primaryLight = Color(0xFF4DD0E1); // Светлый аквамарин
+  static const Color accent = Color(
+    0xFF66BB6A,
+  ); // Зелёный акцент (успех, "нанять")
   static const Color divider = Color(0xFFE0E0E0);
   static const Color error = Color(0xFFE53935);
 
@@ -25,20 +21,27 @@ class AppTheme {
     useMaterial3: true,
     brightness: Brightness.light,
     primaryColor: primary,
-    scaffoldBackgroundColor: Colors.white,
+    scaffoldBackgroundColor: const Color(0xFFFAFAFC), // мягкий off-white
     colorScheme: ColorScheme.light(
       primary: primary,
       secondary: accent,
-      surface: const Color(0xFFFAFAFA),
-      background: Colors.white,
+      surface: const Color(0xFFFAFAFC),
+      background: const Color(0xFFFAFAFC),
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onBackground: const Color(0xFF212121),
       onSurface: const Color(0xFF212121),
-      surfaceVariant: const Color(0xFFF5F5F5),
+      surfaceVariant: const Color(0xFFE0F2F1), // лёгкий намёк на аквамарин
       outline: divider,
       error: error,
+
+      // Контейнеры для иерархии
+      surfaceContainerLowest: const Color(0xFFFFFFFF),
+      surfaceContainerLow: const Color(0xFFF5FEFD),
+      surfaceContainer: const Color(0xFFECFAF8),
+      surfaceContainerHighest: const Color(0xFFE0F7F5),
     ),
+
     appBarTheme: const AppBarTheme(
       backgroundColor: primary,
       foregroundColor: Colors.white,
@@ -50,14 +53,16 @@ class AppTheme {
         fontWeight: FontWeight.w600,
       ),
     ),
+
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFFAFAFC),
       selectedItemColor: primary,
       unselectedItemColor: const Color(0xFF757575),
       showUnselectedLabels: true,
       type: BottomNavigationBarType.fixed,
       elevation: 8,
     ),
+
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: primary,
@@ -67,6 +72,7 @@ class AppTheme {
         textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     ),
+
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: primary,
@@ -75,15 +81,17 @@ class AppTheme {
         padding: const EdgeInsets.symmetric(vertical: 14),
       ),
     ),
+
     cardTheme: CardThemeData(
-      elevation: 4,
+      elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      color: const Color(0xFFFAFAFA),
+      color: const Color(0xFFFFFFFF),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     ),
+
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xFFF5F5F5),
+      fillColor: const Color(0xFFF0FCFA), // лёгкий аквамариновый намёк
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
@@ -99,6 +107,7 @@ class AppTheme {
       labelStyle: const TextStyle(color: Color(0xFF757575)),
       hintStyle: const TextStyle(color: Color(0xFFBDBDBD)),
     ),
+
     textTheme: const TextTheme(
       displayLarge: TextStyle(
         fontSize: 32,
@@ -123,29 +132,38 @@ class AppTheme {
         color: Colors.white,
       ),
     ),
+
     iconTheme: const IconThemeData(color: primary),
     dividerColor: divider,
   );
 
-  // Тёмная тема
+  // Тёмная тема — адаптирована под аквамарин
   static ThemeData darkTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
     primaryColor: primary,
-    scaffoldBackgroundColor: const Color(0xFF121212),
+    scaffoldBackgroundColor: const Color(
+      0xFF0D1B1A,
+    ), // глубокий тёмно-бирюзовый фон
     colorScheme: ColorScheme.dark(
-      primary: primaryLight,        // Светлый фиолетовый для лучшего контраста в тёмной теме
+      primary: primaryLight, // светлый аквамарин для контраста
       secondary: accent,
-      surface: const Color(0xFF1E1E1E),
-      background: const Color(0xFF121212),
-      onPrimary: Colors.white,      // Белый текст на светло-фиолетовом primary
+      surface: const Color(0xFF1A2A29),
+      background: const Color(0xFF0D1B1A),
+      onPrimary: Colors.black87, // тёмный текст на светлом primary
       onSecondary: Colors.black87,
       onBackground: Colors.white,
       onSurface: Colors.white,
-      surfaceVariant: const Color(0xFF242424),
-      outline: const Color(0xFF424242),
+      surfaceVariant: const Color(0xFF2A3D3C),
+      outline: const Color(0xFF4A5C5B),
       error: error,
+
+      surfaceContainerLowest: const Color(0xFF000000),
+      surfaceContainerLow: const Color(0xFF0F2523),
+      surfaceContainer: const Color(0xFF1A2F2D),
+      surfaceContainerHighest: const Color(0xFF2A403E),
     ),
+
     appBarTheme: const AppBarTheme(
       backgroundColor: primaryDark,
       foregroundColor: Colors.white,
@@ -157,23 +175,26 @@ class AppTheme {
         fontWeight: FontWeight.w600,
       ),
     ),
+
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: const Color(0xFF1A2A29),
       selectedItemColor: primaryLight,
       unselectedItemColor: Colors.white70,
       showUnselectedLabels: true,
       type: BottomNavigationBarType.fixed,
       elevation: 8,
     ),
+
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: primaryLight,
-        foregroundColor: Colors.white,  // Белый текст на светлом фиолетовом для читаемости
+        foregroundColor: Colors.black87,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(vertical: 14),
         textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     ),
+
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: primaryLight,
@@ -182,22 +203,24 @@ class AppTheme {
         padding: const EdgeInsets.symmetric(vertical: 14),
       ),
     ),
+
     cardTheme: CardThemeData(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      color: const Color(0xFF1E1E1E),
+      color: const Color(0xFF1A2A29),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     ),
+
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xFF242424),
+      fillColor: const Color(0xFF1E3634),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF424242)),
+        borderSide: const BorderSide(color: Color(0xFF4A5C5B)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF424242)),
+        borderSide: const BorderSide(color: Color(0xFF4A5C5B)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -206,6 +229,7 @@ class AppTheme {
       labelStyle: const TextStyle(color: Colors.white70),
       hintStyle: const TextStyle(color: Colors.white54),
     ),
+
     textTheme: const TextTheme(
       displayLarge: TextStyle(
         fontSize: 32,
@@ -227,14 +251,14 @@ class AppTheme {
       labelLarge: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w500,
-        color: Colors.white,  // Белый для кнопок в темной теме
+        color: Colors.black87,
       ),
     ),
+
     iconTheme: const IconThemeData(color: primaryLight),
-    dividerColor: const Color(0xFF424242),
+    dividerColor: const Color(0xFF4A5C5B),
   );
 
-  // Метод для получения темы
   static ThemeData getTheme(bool isDarkMode) {
     return isDarkMode ? darkTheme : lightTheme;
   }
