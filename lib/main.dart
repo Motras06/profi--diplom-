@@ -3,6 +3,8 @@ import 'package:device_preview/device_preview.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:profi/providers/theme_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'theme/app_theme.dart';
@@ -22,8 +24,11 @@ void main() async {
 
   runApp(
     DevicePreview(
-      enabled: !kReleaseMode, // Автоматически выключается в релизе
-      builder: (context) => const MainApp(),
+      enabled: !kReleaseMode,
+      builder: (context) => MultiProvider(
+        providers: [ChangeNotifierProvider(create: (_) => ThemeProvider())],
+        child: const MainApp(),
+      ),
     ),
   );
 }
@@ -64,48 +69,36 @@ class MainApp extends StatelessWidget {
   }
 
   @override
-Widget build(BuildContext context) {
-  return MaterialApp(
-    title: 'Pro_fi',
-    debugShowCheckedModeBanner: false,
-    theme: AppTheme.lightTheme,
-    
-    // Добавленные строки для DevicePreview
-    useInheritedMediaQuery: true,
-    locale: DevicePreview.locale(context),       
-    builder: DevicePreview.appBuilder,
-    
-    home: FutureBuilder<Widget>(
-      future: _getStartingScreen(),
-      builder: (context, snapshot) {
-        if (snapshot.hasData) {
-          return snapshot.data!;
-        } else if (snapshot.hasError) {
-          return const AuthScreen();
-        }
+  Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
 
-        return const Scaffold(
-          backgroundColor: Colors.white,
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF009999)),
-                ),
-                SizedBox(height: 32),
-                Text(
-                  'Загрузка приложения...',
-                  style: TextStyle(fontSize: 18, color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    ),
-  );
-}
+    return MaterialApp(
+      title: 'ProWirkSearch',
+      debugShowCheckedModeBanner: false,
+
+      // ← Вот ключевые изменения
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeProvider.themeMode,
+
+      // DevicePreview настройки
+      useInheritedMediaQuery: true,
+      locale: DevicePreview.locale(context),
+      builder: DevicePreview.appBuilder,
+
+      home: FutureBuilder<Widget>(
+        future: _getStartingScreen(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) return snapshot.data!;
+          if (snapshot.hasError) return const AuthScreen();
+
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        },
+      ),
+    );
+  }
 }
 
 /*

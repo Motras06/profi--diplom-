@@ -20,7 +20,7 @@ class RegisterTab extends StatefulWidget {
   State<RegisterTab> createState() => _RegisterTabState();
 }
 
-class _RegisterTabState extends State<RegisterTab> {
+class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -34,13 +34,54 @@ class _RegisterTabState extends State<RegisterTab> {
   File? _compressedImage;
   bool _isLoading = false;
 
-  // Состояние видимости паролей
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
+
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   final _picker = ImagePicker();
 
   static const int maxFileSizeBytes = 1024 * 1024; // 1 МБ
+
+  @override
+  void initState() {
+    super.initState();
+
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0.0, 0.20),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
+    );
+
+    // Запуск анимации с небольшой задержкой
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) _animationController.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _displayNameController.dispose();
+    _aboutController.dispose();
+    _specialtyController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickAndCompressImage() async {
     if (_isLoading) return;
@@ -103,7 +144,12 @@ class _RegisterTabState extends State<RegisterTab> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ошибка загрузки фото')),
+          SnackBar(
+            content: const Text('Ошибка загрузки фото'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
         );
       }
       return null;
@@ -114,9 +160,15 @@ class _RegisterTabState extends State<RegisterTab> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_passwordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Пароли не совпадают')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Пароли не совпадают'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
       return;
     }
 
@@ -148,175 +200,292 @@ class _RegisterTabState extends State<RegisterTab> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Регистрация успешна!')),
+          SnackBar(
+            content: const Text('Регистрация успешна!'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
         );
 
-        if (role == 'specialist') {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => SpecialistHome(displayName: _displayNameController.text.trim())),
-          );
-        } else {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => UserHome(displayName: _displayNameController.text.trim())),
-          );
-        }
+        Widget destination = _selectedRole == UserRole.specialist
+            ? SpecialistHome(displayName: _displayNameController.text.trim())
+            : UserHome(displayName: _displayNameController.text.trim());
+
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => destination),
+        );
       }
     } on AuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ошибка регистрации')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ошибка регистрации')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    _displayNameController.dispose();
-    _aboutController.dispose();
-    _specialtyController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          children: [
-            GestureDetector(
-              onTap: _pickAndCompressImage,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  CircleAvatar(
-                    radius: 60,
-                    backgroundColor: colorScheme.primary.withOpacity(0.1),
-                    backgroundImage: _compressedImage != null
-                        ? FileImage(_compressedImage!)
-                        : (_originalImage != null ? FileImage(_originalImage!) : null),
-                    child: (_compressedImage == null && _originalImage == null)
-                        ? Icon(Icons.add_a_photo, size: 40, color: colorScheme.primary)
-                        : null,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: SlideTransition(
+          position: _slideAnimation,
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 16),
+
+                // Аватар — в стиле M3 с ripple эффектом
+                Center(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(80),
+                    onTap: _pickAndCompressImage,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Material(
+                          elevation: 2,
+                          shape: const CircleBorder(),
+                          clipBehavior: Clip.antiAlias,
+                          child: CircleAvatar(
+                            radius: 60,
+                            backgroundColor: colorScheme.surfaceContainerHighest,
+                            backgroundImage: _compressedImage != null
+                                ? FileImage(_compressedImage!)
+                                : (_originalImage != null ? FileImage(_originalImage!) : null),
+                            child: (_compressedImage == null && _originalImage == null)
+                                ? Icon(
+                                    Icons.add_a_photo_rounded,
+                                    size: 48,
+                                    color: colorScheme.primary,
+                                  )
+                                : null,
+                          ),
+                        ),
+                        if (_isLoading && _compressedImage == null)
+                          SizedBox(
+                            width: 120,
+                            height: 120,
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                              strokeWidth: 4,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                  if (_isLoading && _compressedImage == null)
-                    const CircularProgressIndicator(strokeWidth: 3),
+                ),
+
+                const SizedBox(height: 12),
+
+                Text(
+                  _compressedImage != null
+                      ? 'Фото загружено (${(_compressedImage!.lengthSync() ~/ 1024).toStringAsFixed(0)} КБ)'
+                      : _isLoading
+                          ? 'Сжатие изображения...'
+                          : 'Нажмите на фото, чтобы выбрать аватар (опционально)',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 32),
+
+                // SegmentedButton в стиле M3
+                SegmentedButton<UserRole>(
+                  style: SegmentedButton.styleFrom(
+                    backgroundColor: colorScheme.surfaceContainerHighest,
+                    foregroundColor: colorScheme.onSurface,
+                    selectedBackgroundColor: colorScheme.primaryContainer,
+                    selectedForegroundColor: colorScheme.onPrimaryContainer,
+                    side: BorderSide(color: colorScheme.outline),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  segments: const [
+                    ButtonSegment(value: UserRole.user, label: Text('Клиент')),
+                    ButtonSegment(value: UserRole.specialist, label: Text('Исполнитель')),
+                  ],
+                  selected: {_selectedRole},
+                  onSelectionChanged: (set) => setState(() => _selectedRole = set.first),
+                ),
+
+                const SizedBox(height: 32),
+
+                // Поля ввода — Filled стиль M3
+                TextFormField(
+                  controller: _displayNameController,
+                  textInputAction: TextInputAction.next,
+                  validator: (v) => v!.trim().isEmpty ? 'Введите имя' : null,
+                  decoration: InputDecoration(
+                    labelText: 'Отображаемое имя *',
+                    filled: true,
+                    fillColor: colorScheme.surfaceContainerHighest,
+                    prefixIcon: Icon(Icons.person_outline, color: colorScheme.onSurfaceVariant),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  validator: (v) => v!.trim().isEmpty || !v.contains('@') ? 'Неверный email' : null,
+                  decoration: InputDecoration(
+                    labelText: 'Email *',
+                    filled: true,
+                    fillColor: colorScheme.surfaceContainerHighest,
+                    prefixIcon: Icon(Icons.email_outlined, color: colorScheme.onSurfaceVariant),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: !_isPasswordVisible,
+                  textInputAction: TextInputAction.next,
+                  validator: (v) => v!.length < 6 ? 'Минимум 6 символов' : null,
+                  decoration: InputDecoration(
+                    labelText: 'Пароль *',
+                    filled: true,
+                    fillColor: colorScheme.surfaceContainerHighest,
+                    prefixIcon: Icon(Icons.lock_outline, color: colorScheme.onSurfaceVariant),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  obscureText: !_isConfirmPasswordVisible,
+                  textInputAction: TextInputAction.done,
+                  decoration: InputDecoration(
+                    labelText: 'Подтвердите пароль *',
+                    filled: true,
+                    fillColor: colorScheme.surfaceContainerHighest,
+                    prefixIcon: Icon(Icons.lock_outline, color: colorScheme.onSurfaceVariant),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      onPressed: () => setState(() => _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+
+                if (_selectedRole == UserRole.specialist) ...[
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: _aboutController,
+                    maxLines: 4,
+                    textInputAction: TextInputAction.newline,
+                    decoration: InputDecoration(
+                      labelText: 'О себе',
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest,
+                      prefixIcon: Icon(Icons.info_outline, color: colorScheme.onSurfaceVariant),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      alignLabelWithHint: true,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: _specialtyController,
+                    textInputAction: TextInputAction.done,
+                    decoration: InputDecoration(
+                      labelText: 'Специальность',
+                      hintText: 'Например: Сантехник, Электрик, Плиточник...',
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest,
+                      prefixIcon: Icon(Icons.work_outline, color: colorScheme.onSurfaceVariant),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _compressedImage != null
-                  ? 'Фото готово (${(_compressedImage!.lengthSync() ~/ 1024).toStringAsFixed(0)} КБ)'
-                  : _isLoading
-                      ? 'Сжатие фото...'
-                      : 'Нажмите, чтобы выбрать фото',
-              style: TextStyle(color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
 
-            const SizedBox(height: 32),
+                const SizedBox(height: 40),
 
-            SegmentedButton<UserRole>(
-              segments: const [
-                ButtonSegment(value: UserRole.user, label: Text('Пользователь')),
-                ButtonSegment(value: UserRole.specialist, label: Text('Специалист')),
+                // Кнопка регистрации — FilledButton (M3 primary action)
+                FilledButton.icon(
+                  onPressed: _isLoading ? null : _registerAndNavigate,
+                  icon: _isLoading
+                      ? const SizedBox.shrink()
+                      : const Icon(Icons.person_add_rounded),
+                  label: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : const Text('Зарегистрироваться'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(56),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                    textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+
+                const SizedBox(height: 32),
               ],
-              selected: {_selectedRole},
-              onSelectionChanged: (set) => setState(() => _selectedRole = set.first),
             ),
-
-            const SizedBox(height: 24),
-
-            TextFormField(
-              controller: _displayNameController,
-              validator: (v) => v!.trim().isEmpty ? 'Введите имя' : null,
-              decoration: const InputDecoration(labelText: 'Отображаемое имя *', prefixIcon: Icon(Icons.person_outline)),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              validator: (v) => v!.trim().isEmpty || !v.contains('@') ? 'Неверный email' : null,
-              decoration: const InputDecoration(labelText: 'Email *', prefixIcon: Icon(Icons.email_outlined)),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _passwordController,
-              obscureText: !_isPasswordVisible,
-              validator: (v) => v!.length < 6 ? 'Минимум 6 символов' : null,
-              decoration: InputDecoration(
-                labelText: 'Пароль *',
-                prefixIcon: const Icon(Icons.lock_outline),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                    color: Colors.grey,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _isPasswordVisible = !_isPasswordVisible;
-                    });
-                  },
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _confirmPasswordController,
-              obscureText: !_isConfirmPasswordVisible,
-              decoration: InputDecoration(
-                labelText: 'Подтвердите пароль *',
-                prefixIcon: const Icon(Icons.lock_outline),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                    color: Colors.grey,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
-                    });
-                  },
-                ),
-              ),
-            ),
-
-            if (_selectedRole == UserRole.specialist) ...[
-              const SizedBox(height: 16),
-              TextField(
-                controller: _aboutController,
-                maxLines: 4,
-                decoration: const InputDecoration(labelText: 'О себе', prefixIcon: Icon(Icons.info_outline)),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _specialtyController,
-                decoration: const InputDecoration(
-                  labelText: 'Специальность',
-                  hintText: 'Например: Сантехник, Электрик',
-                  prefixIcon: Icon(Icons.work_outline),
-                ),
-              ),
-            ],
-
-            const SizedBox(height: 32),
-
-            ElevatedButton(
-              onPressed: _isLoading ? null : _registerAndNavigate,
-              style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
-              child: _isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Зарегистрироваться'),
-            ),
-          ],
+          ),
         ),
       ),
     );
