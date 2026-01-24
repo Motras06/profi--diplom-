@@ -1,11 +1,17 @@
-// lib/widgets/user/profile_tab/profile_tab.dart
+// lib/screens/user/profile_tab.dart
 import 'package:flutter/material.dart';
-import 'package:profi/screens/other/my_orders_screen.dart';
-import 'package:profi/screens/other/my_reviews_screen.dart';
-import 'package:profi/screens/other/settings_screen.dart';
+import 'package:profi/models/profile_stats.dart';
+import 'package:profi/services/profile_service.dart';
+import 'package:profi/widgets/user/profile_tab/my_orders_screen.dart';
+import 'package:profi/widgets/user/profile_tab/my_reviews_screen.dart';
+import 'package:profi/widgets/user/profile_tab/profile_avatar.dart';
+import 'package:profi/widgets/user/profile_tab/profile_info.dart';
+import 'package:profi/widgets/user/profile_tab/profile_stats_row.dart';
+import 'package:profi/widgets/user/profile_tab/profile_action_button.dart';
 import 'package:profi/widgets/user/profile_tab/edit_profile_form.dart';
-import '../../../services/supabase_service.dart';
-import '../../../screens/auth/auth_screen.dart';
+import 'package:profi/screens/other/settings_screen.dart';
+import 'package:profi/screens/auth/auth_screen.dart';
+import 'package:profi/services/supabase_service.dart';
 
 class UserProfileTab extends StatefulWidget {
   const UserProfileTab({super.key});
@@ -15,109 +21,66 @@ class UserProfileTab extends StatefulWidget {
 }
 
 class _UserProfileTabState extends State<UserProfileTab> {
+  final _profileService = ProfileService();
+
   bool _isLoading = true;
   bool _isEditing = false;
 
   String? _displayName;
   String? _photoUrl;
-  String? _role; // 'client' | 'specialist' | null
+  String? _role;
   String? _specialty;
-
-  // Статистика
-  int _ordersCount = 0;
-  int _reviewsCount = 0;
-  int _savedServicesCount = 0;
-  double _averageRating = 0.0;
+  ProfileStats _stats = ProfileStats();
 
   @override
   void initState() {
     super.initState();
-    _loadProfileAndStats();
+    _loadData();
   }
 
-  Future<void> _loadProfileAndStats() async {
+  Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
     try {
       final user = supabase.auth.currentUser;
       if (user == null) throw Exception('Не авторизован');
 
-      // 1. Профиль
-      final profileRes = await supabase
-          .from('profiles')
-          .select('display_name, photo_url, role, specialty')
-          .eq('id', user.id)
-          .single();
+      final profile = await _profileService.fetchProfile(user.id);
+      final stats = await _profileService.fetchStats(user.id, profile['role']);
 
-      setState(() {
-        _displayName = profileRes['display_name'] as String?;
-        _photoUrl = profileRes['photo_url'] as String?;
-        _role = profileRes['role'] as String?;
-        _specialty = profileRes['specialty'] as String?;
-      });
-
-      // 2. Статистика
-      final ordersRes = await supabase
-          .from('orders')
-          .select('count')
-          .eq('user_id', user.id);
-      _ordersCount = (ordersRes.firstOrNull?['count'] as int?) ?? 0;
-
-      final savedRes = await supabase
-          .from('saved_services')
-          .select('count')
-          .eq('user_id', user.id);
-      _savedServicesCount = (savedRes.firstOrNull?['count'] as int?) ?? 0;
-
-      if (_role == 'specialist') {
-        final reviewsRes = await supabase
-            .from('reviews')
-            .select('count, avg(rating)')
-            .eq('specialist_id', user.id)
-            .single();
-
-        _reviewsCount = (reviewsRes['count'] as int?) ?? 0;
-        _averageRating = (reviewsRes['avg'] as num?)?.toDouble() ?? 0.0;
-      } else {
-        final myReviewsRes = await supabase
-            .from('reviews')
-            .select('count')
-            .eq('user_id', user.id);
-        _reviewsCount = (myReviewsRes.firstOrNull?['count'] as int?) ?? 0;
+      if (mounted) {
+        setState(() {
+          _displayName = profile['display_name'] as String?;
+          _photoUrl = profile['photo_url'] as String?;
+          _role = profile['role'] as String?;
+          _specialty = profile['specialty'] as String?;
+          _stats = stats;
+          _isLoading = false;
+        });
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Ошибка загрузки: $e')),
         );
+        setState(() => _isLoading = false);
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _startEditing() => setState(() => _isEditing = true);
-  void _cancelEditing() => setState(() => _isEditing = false);
-
   Future<void> _saveProfile(String name, String? photoUrl) async {
-    setState(() => _isLoading = true);
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return;
 
     try {
-      final userId = supabase.auth.currentUser?.id;
-      if (userId == null) return;
-
-      await supabase.from('profiles').update({
-        'display_name': name.trim(),
-        'photo_url': photoUrl,
-      }).eq('id', userId);
-
-      setState(() {
-        _displayName = name.trim();
-        _photoUrl = photoUrl;
-        _isEditing = false;
-      });
+      await _profileService.updateProfile(userId, name, photoUrl);
 
       if (mounted) {
+        setState(() {
+          _displayName = name.trim();
+          _photoUrl = photoUrl;
+          _isEditing = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Профиль сохранён')),
         );
@@ -125,13 +88,14 @@ class _UserProfileTabState extends State<UserProfileTab> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e')),
+          SnackBar(content: Text('Ошибка сохранения: $e')),
         );
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
+
+  void _startEditing() => setState(() => _isEditing = true);
+  void _cancelEditing() => setState(() => _isEditing = false);
 
   Future<void> _logout() async {
     await supabase.auth.signOut();
@@ -142,28 +106,6 @@ class _UserProfileTabState extends State<UserProfileTab> {
         (route) => false,
       );
     }
-  }
-
-  // Переходы
-  void _openSettings() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const SettingsScreen()),
-    );
-  }
-
-  void _openMyOrders() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const MyOrdersScreen()),
-    );
-  }
-
-  void _openMyReviews() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const MyReviewsScreen()),
-    );
   }
 
   @override
@@ -189,7 +131,10 @@ class _UserProfileTabState extends State<UserProfileTab> {
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Настройки',
-            onPressed: _openSettings,  // ← теперь в AppBar — надёжно работает
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
           ),
         ],
       ),
@@ -198,90 +143,43 @@ class _UserProfileTabState extends State<UserProfileTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Аватар + имя + роль
-            CircleAvatar(
-              radius: 70,
-              backgroundColor: Colors.grey.shade200,
-              backgroundImage: _photoUrl != null ? NetworkImage(_photoUrl!) : null,
-              child: _photoUrl == null
-                  ? Text(
-                      (_displayName?.substring(0, 1).toUpperCase()) ?? '?',
-                      style: const TextStyle(fontSize: 60, fontWeight: FontWeight.bold),
-                    )
-                  : null,
+            ProfileAvatar(
+              photoUrl: _photoUrl,
+              displayName: _displayName,
             ),
-
-            const SizedBox(height: 20),
-
-            Text(
-              _displayName ?? 'Имя не указано',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-              textAlign: TextAlign.center,
+            ProfileInfo(
+              displayName: _displayName,
+              role: _role,
+              specialty: _specialty,
+              email: supabase.auth.currentUser?.email,
             ),
-
-            if (_role != null) ...[
-              const SizedBox(height: 6),
-              Chip(
-                label: Text(
-                  _role == 'specialist' ? (_specialty ?? 'Специалист') : 'Клиент',
-                ),
-                backgroundColor: _role == 'specialist' ? Colors.blue.shade100 : Colors.green.shade100,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-              ),
-            ],
-
-            const SizedBox(height: 8),
-            Text(
-              supabase.auth.currentUser?.email ?? '—',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey.shade700,
-                  ),
-            ),
-
-            const SizedBox(height: 40),
-
-            // Статистика
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _StatCard(icon: Icons.work_outline, value: '$_ordersCount', label: 'Заказов'),
-                _StatCard(
-                  icon: Icons.star_outline,
-                  value: _role == 'specialist' ? _averageRating.toStringAsFixed(1) : '$_reviewsCount',
-                  label: _role == 'specialist' ? 'Рейтинг' : 'Отзывов',
-                ),
-                _StatCard(icon: Icons.bookmark_border, value: '$_savedServicesCount', label: 'Сохранено'),
-              ],
-            ),
-
+            ProfileStatsRow(stats: _stats, role: _role),
             const SizedBox(height: 48),
-
-            // Основные действия
-            _ActionButton(
+            ProfileActionButton(
               icon: Icons.receipt_long_outlined,
               label: 'Мои заказы',
-              onPressed: _openMyOrders,
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MyOrdersScreen()),
+              ),
             ),
             const SizedBox(height: 16),
-
-            _ActionButton(
+            ProfileActionButton(
               icon: Icons.rate_review_outlined,
               label: 'Мои отзывы',
-              onPressed: _openMyReviews,
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MyReviewsScreen()),
+              ),
             ),
             const SizedBox(height: 16),
-
-            _ActionButton(
+            ProfileActionButton(
               icon: Icons.edit,
               label: 'Редактировать профиль',
               onPressed: _startEditing,
               isFilled: true,
             ),
-            const SizedBox(height: 24),
-
-            // Выход
+            const SizedBox(height: 32),
             OutlinedButton.icon(
               onPressed: _logout,
               icon: Icon(Icons.logout, color: Colors.red.shade700),
@@ -295,74 +193,8 @@ class _UserProfileTabState extends State<UserProfileTab> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
-
-            const SizedBox(height: 40),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// Вспомогательные виджеты (без изменений)
-class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final String label;
-
-  const _StatCard({required this.icon, required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        CircleAvatar(
-          radius: 28,
-          backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-          child: Icon(icon, color: Theme.of(context).colorScheme.primary),
-        ),
-        const SizedBox(height: 8),
-        Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-      ],
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onPressed;
-  final bool isFilled;
-
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-    this.isFilled = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (isFilled) {
-      return FilledButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon, size: 20),
-        label: Text(label),
-        style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(54),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        ),
-      );
-    }
-
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 20),
-      label: Text(label),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size.fromHeight(54),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
   }

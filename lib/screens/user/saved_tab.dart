@@ -13,8 +13,11 @@ class SavedTab extends StatefulWidget {
   State<SavedTab> createState() => _SavedTabState();
 }
 
-class _SavedTabState extends State<SavedTab> {
+class _SavedTabState extends State<SavedTab> with TickerProviderStateMixin {
+  // ← Добавили TickerProvider для AnimatedList
   final SavedServiceService _service = SavedServiceService();
+  final GlobalKey<AnimatedListState> _listKey =
+      GlobalKey<AnimatedListState>(); // ← Ключ для AnimatedList
 
   @override
   void initState() {
@@ -23,7 +26,57 @@ class _SavedTabState extends State<SavedTab> {
     _service.loadSavedServices();
   }
 
-  void _onChange() => setState(() {});
+  void _onChange() {
+    if (mounted) {
+      setState(() {}); // ← Для перестройки при загрузке/фильтрах
+    }
+  }
+
+  void _removeItem(int index, Map<String, dynamic> service) {
+    final serviceId = service['id'];
+    if (serviceId == null) return;
+
+    // Анимированное удаление
+    _listKey.currentState?.removeItem(
+      index,
+      (context, animation) => _buildAnimatedItem(
+        context,
+        service,
+        animation,
+        isRemoving: true,
+      ), // ← Анимированный placeholder
+      duration: const Duration(
+        milliseconds: 400,
+      ), // ← Длительность анимации удаления
+    );
+
+    // Удаляем из сервиса (асинхронно, если нужно)
+    _service.removeFromSaved(serviceId);
+  }
+
+  Widget _buildAnimatedItem(
+    BuildContext context,
+    Map<String, dynamic> service,
+    Animation<double> animation, {
+    bool isRemoving = false,
+  }) {
+    return SizeTransition(
+      // ← Fade + slide анимация
+      sizeFactor: animation,
+      child: FadeTransition(
+        opacity: animation,
+        child: isRemoving
+            ? SavedServiceCard(
+                service: service,
+                onRemove: () {},
+              ) // Placeholder без onRemove
+            : SavedServiceCard(
+                service: service,
+                onRemove: () => _removeItem(/* current index */ 0, service),
+              ), // Замените 0 на реальный index
+      ),
+    );
+  }
 
   void _openFilters() {
     showModalBottomSheet(
@@ -33,10 +86,12 @@ class _SavedTabState extends State<SavedTab> {
       builder: (context) => SavedTabFiltersBottomSheet(
         service: _service,
         onApply: () {
-          setState(() {});
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Фильтры применены')),
-          );
+          if (mounted) {
+            setState(() {});
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Фильтры применены')));
+          }
         },
       ),
     );
@@ -51,38 +106,87 @@ class _SavedTabState extends State<SavedTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          SavedTabSearchBar(
-            controller: _service.searchController,
-            onFilterPressed: _openFilters,
-          ),
+    final screenWidth = MediaQuery.of(context).size.width;
+    final childAspectRatio = screenWidth < 360 ? 0.72 : 0.68;
+    final horizontalPadding = screenWidth < 360 ? 8.0 : 12.0;
+    final crossSpacing = screenWidth < 360 ? 10.0 : 14.0;
+    final mainSpacing = screenWidth < 360 ? 12.0 : 16.0;
 
-          Expanded(
-            child: _service.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _service.filteredServices.isEmpty
-                    ? const SavedTabEmptyState()
-                    : GridView.builder(
-                        padding: const EdgeInsets.all(8),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.75,
-                          crossAxisSpacing: 4,
-                          mainAxisSpacing: 8,
-                        ),
-                        itemCount: _service.filteredServices.length,
-                        itemBuilder: (context, index) {
-                          final service = _service.filteredServices[index];
-                          return SavedServiceCard(
-                            service: service,
-                            onRemove: () => _service.removeFromSaved(service['id']),
-                          );
-                        },
-                      ),
+    if (_service.isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_service.filteredServices.isEmpty) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.background,
+        body: SafeArea(
+          top: true,
+          bottom: false,
+          child: Column(
+            children: [
+              SavedTabSearchBar(
+                controller: _service.searchController,
+                onFilterPressed: _openFilters,
+              ),
+              const Expanded(child: SavedTabEmptyState()),
+            ],
           ),
-        ],
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.background,
+      body: SafeArea(
+        top: true,
+        bottom: false,
+        child: Column(
+          children: [
+            SavedTabSearchBar(
+              controller: _service.searchController,
+              onFilterPressed: _openFilters,
+            ),
+
+            // lib/screens/user/saved_tab.dart  — только изменённая часть Expanded
+            Expanded(
+              child: _service.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _service.filteredServices.isEmpty
+                  ? const SavedTabEmptyState()
+                  : GridView.builder(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding,
+                        vertical: 12,
+                      ),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio:
+                            childAspectRatio, // ← ваши старые пропорции
+                        crossAxisSpacing: crossSpacing,
+                        mainAxisSpacing: mainSpacing,
+                      ),
+                      itemCount: _service.filteredServices.length,
+                      itemBuilder: (context, index) {
+                        final service = _service.filteredServices[index];
+                        final serviceId = service['id'];
+
+                        if (serviceId == null) {
+                          debugPrint('У услуги нет id: $service');
+                          return const SizedBox.shrink();
+                        }
+
+                        return SavedServiceCard(
+                          service: service,
+                          onRemove: () {
+                            // Простое удаление без await и без ScaleTransition внутри карточки
+                            _service.removeFromSaved(serviceId);
+                          },
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,7 +1,7 @@
 // lib/screens/other/my_reviews_screen.dart
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../other/service_screen.dart'; // импорт экрана услуги
+import '../../../screens/other/service_screen.dart'; // импорт экрана услуги
 
 class MyReviewsScreen extends StatefulWidget {
   const MyReviewsScreen({super.key});

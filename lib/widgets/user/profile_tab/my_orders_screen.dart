@@ -1,7 +1,7 @@
 // lib/screens/other/my_orders_screen.dart
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'order_detail_screen.dart';
+import '../../../screens/other/order_detail_screen.dart';
 
 class MyOrdersScreen extends StatefulWidget {
   const MyOrdersScreen({super.key});
