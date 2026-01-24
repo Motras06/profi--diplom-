@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
-import '../../services/supabase_service.dart';
 
 class SpecialistChatScreen extends StatefulWidget {
   final String clientId;

@@ -17,6 +17,9 @@ class ProfileInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Column(
       children: [
         const SizedBox(height: 20),
@@ -33,7 +36,7 @@ class ProfileInfo extends StatelessWidget {
             label: Text(
               role == 'specialist' ? (specialty ?? 'Специалист') : 'Клиент',
             ),
-            backgroundColor: role == 'specialist' ? Colors.blue.shade100 : Colors.green.shade100,
+            backgroundColor: role == 'specialist' ? Colors.blue.shade100 : colorScheme.primary,
             padding: const EdgeInsets.symmetric(horizontal: 16),
           ),
         ],
@@ -41,7 +44,7 @@ class ProfileInfo extends StatelessWidget {
         Text(
           email ?? '—',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey.shade700,
+                color: colorScheme.primary,
               ),
         ),
       ],

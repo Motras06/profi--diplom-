@@ -1,9 +1,8 @@
 // lib/widgets/user/profile_tab/edit_profile_form.dart
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:image/image.dart' as img;
-
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:profi/widgets/specialist/profile_tab/change_password_dialog.dart';
 import '../../../services/supabase_service.dart';
@@ -28,94 +27,119 @@ class EditProfileForm extends StatefulWidget {
   State<EditProfileForm> createState() => _EditProfileFormState();
 }
 
-class _EditProfileFormState extends State<EditProfileForm> {
+class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProviderStateMixin {
   late TextEditingController _nameController;
-
   File? _newPhotoFile;
-  final _picker = ImagePicker();
-
   bool _isSaving = false;
 
-  static const int maxFileSizeBytes = 1024 * 1024;
+  static const int maxFileSizeBytes = 1 * 1024 * 1024;
+  late AnimationController _avatarAnimController;
+  late Animation<double> _avatarScaleAnimation;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName);
+
+    _avatarAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 420),
+    );
+    _avatarScaleAnimation = Tween<double>(begin: 0.88, end: 1.0).animate(
+      CurvedAnimation(parent: _avatarAnimController, curve: Curves.easeOutCubic),
+    );
+
+    if (widget.initialPhotoUrl != null || widget.initialName.trim().isNotEmpty) {
+      _avatarAnimController.forward();
+    }
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _avatarAnimController.dispose();
     super.dispose();
   }
 
   Future<void> _pickAndCompressPhoto() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery, maxWidth: 1200, imageQuality: 85);
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1200,
+      imageQuality: 82,
+    );
     if (picked == null) return;
 
-    final originalFile = File(picked.path);
-    setState(() => _newPhotoFile = originalFile);
+    final original = File(picked.path);
+    setState(() => _newPhotoFile = original);
 
-    final compressed = await _compressToUnder1MB(originalFile);
-    if (mounted && compressed != null) {
+    final compressed = await _compressToUnder1MB(original);
+    if (compressed != null && mounted) {
       setState(() => _newPhotoFile = compressed);
+      _avatarAnimController.forward(from: 0.0);
     }
   }
 
   Future<File?> _compressToUnder1MB(File file) async {
-    Uint8List bytes = await file.readAsBytes();
-    int quality = 90;
+    try {
+      Uint8List bytes = await file.readAsBytes();
+      int quality = 88;
 
-    while (quality > 10 && bytes.lengthInBytes > maxFileSizeBytes) {
-      img.Image? image = img.decodeImage(bytes);
-      if (image == null) break;
-
-      if (image.width > 800 || image.height > 800) {
-        image = img.copyResize(image, width: 800);
+      while (quality > 20 && bytes.lengthInBytes > maxFileSizeBytes) {
+        img.Image? image = img.decodeImage(bytes);
+        if (image == null) break;
+        if (image.width > 900 || image.height > 900) {
+          image = img.copyResize(image, width: 900);
+        }
+        bytes = img.encodeJpg(image, quality: quality);
+        quality -= 12;
       }
 
-      bytes = img.encodeJpg(image, quality: quality);
-      quality -= 10;
+      final tempFile = File('${Directory.systemTemp.path}/compressed_avatar_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      await tempFile.writeAsBytes(bytes);
+      return tempFile;
+    } catch (_) {
+      return null;
     }
-
-    final tempFile = File('${Directory.systemTemp.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg');
-    await tempFile.writeAsBytes(bytes);
-    return tempFile;
   }
 
   Future<String?> _uploadNewPhoto(String userId) async {
     if (_newPhotoFile == null) return widget.initialPhotoUrl;
-
     try {
       final fileName = '$userId/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
       await supabase.storage.from('profile').upload(fileName, _newPhotoFile!);
       return supabase.storage.from('profile').getPublicUrl(fileName);
     } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка загрузки фото: $e')),
+        );
+      }
       return widget.initialPhotoUrl;
     }
   }
 
   Future<void> _save() async {
-    if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Имя не может быть пустым')));
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Имя не может быть пустым')),
+      );
       return;
     }
 
     setState(() => _isSaving = true);
-
     try {
       final userId = supabase.auth.currentUser?.id;
       if (userId == null) return;
 
       final newPhotoUrl = await _uploadNewPhoto(userId);
-
-      await widget.onSave(
-        _nameController.text.trim(),
-        newPhotoUrl,
-      );
+      await widget.onSave(name, newPhotoUrl);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Не удалось сохранить: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -123,74 +147,189 @@ class _EditProfileFormState extends State<EditProfileForm> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          GestureDetector(
-            onTap: _pickAndCompressPhoto,
-            child: Stack(
-              alignment: Alignment.bottomRight,
-              children: [
-                CircleAvatar(
-                  radius: 80,
-                  backgroundColor: colorScheme.primary.withOpacity(0.1),
-                  backgroundImage: _newPhotoFile != null
-                      ? FileImage(_newPhotoFile!)
-                      : (widget.initialPhotoUrl != null ? NetworkImage(widget.initialPhotoUrl!) : null),
-                  child: (_newPhotoFile == null && widget.initialPhotoUrl == null)
-                      ? Text(
-                          _nameController.text[0].toUpperCase(),
-                          style: TextStyle(fontSize: 64, color: colorScheme.primary),
-                        )
-                      : null,
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 8),
+
+            // Заголовок + объяснение
+            Text(
+              'Редактирование профиля',
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: colorScheme.onBackground,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Нажмите на фото, чтобы выбрать новое изображение.\n'
+              'Максимальный размер — около 1 МБ, фото будет автоматически оптимизировано.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: 32),
+
+            // Аватар
+            Center(
+              child: GestureDetector(
+                onTap: _isSaving ? null : _pickAndCompressPhoto,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 480),
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: ScaleTransition(scale: _avatarScaleAnimation, child: child),
+                  ),
+                  child: Stack(
+                    key: ValueKey<bool>(_newPhotoFile != null),
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      Container(
+                        width: 160,
+                        height: 160,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: colorScheme.primaryContainer.withOpacity(0.2),
+                        ),
+                        child: CircleAvatar(
+                          radius: 80,
+                          backgroundColor: Colors.transparent,
+                          foregroundImage: _newPhotoFile != null
+                              ? FileImage(_newPhotoFile!)
+                              : (widget.initialPhotoUrl != null
+                                  ? NetworkImage(widget.initialPhotoUrl!)
+                                  : null),
+                          child: (_newPhotoFile == null && widget.initialPhotoUrl == null)
+                              ? Text(
+                                  _nameController.text.trim().isNotEmpty
+                                      ? _nameController.text.trim()[0].toUpperCase()
+                                      : '?',
+                                  style: TextStyle(
+                                    fontSize: 72,
+                                    fontWeight: FontWeight.w600,
+                                    color: colorScheme.primary,
+                                  ),
+                                )
+                              : null,
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 4,
+                        right: 4,
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: ShapeDecoration(
+                            color: colorScheme.primary,
+                            shape: const CircleBorder(),
+                            shadows: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.20),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.camera_alt_rounded,
+                            size: 22,
+                            color: colorScheme.onPrimary,
+                          ),
+                        ),
+                      ),
+                      if (_isSaving)
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.black45,
+                            ),
+                            child: const Center(
+                              child: CircularProgressIndicator(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: colorScheme.primary,
-                  child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+              ),
+            ),
+
+            const SizedBox(height: 40),
+
+            TextField(
+              controller: _nameController,
+              textCapitalization: TextCapitalization.words,
+              enabled: !_isSaving,
+              decoration: InputDecoration(
+                labelText: 'Имя или никнейм',
+                helperText: 'Как вас будут видеть другие пользователи',
+                helperStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                prefixIcon: const Icon(Icons.person_rounded),
+                filled: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 40),
+
+            OutlinedButton.icon(
+              onPressed: _isSaving ? null : () => ChangePasswordDialog.show(context),
+              icon: const Icon(Icons.key_rounded, size: 20),
+              label: const Text('Сменить пароль'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+            ),
+
+            const SizedBox(height: 48),
+
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _isSaving ? null : widget.onCancel,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: const Text('Отмена'),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _isSaving ? null : _save,
+                    icon: _isSaving
+                        ? const SizedBox.shrink()
+                        : const Icon(Icons.save_rounded, size: 20),
+                    label: _isSaving
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 3),
+                          )
+                        : const Text('Сохранить изменения'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 32),
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Имя',
-              prefixIcon: Icon(Icons.person),
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 32),
-          OutlinedButton.icon(
-            onPressed: () => ChangePasswordDialog.show(context),
-            icon: const Icon(Icons.key),
-            label: const Text('Сменить пароль'),
-          ),
-          const SizedBox(height: 32),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: widget.onCancel,
-                  child: const Text('Отмена'),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _isSaving ? null : _save,
-                  child: _isSaving
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Сохранить'),
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
