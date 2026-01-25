@@ -1,6 +1,11 @@
 // lib/screens/other/my_orders_screen.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../../screens/other/order_detail_screen.dart';
 
 class MyOrdersScreen extends StatefulWidget {
@@ -34,9 +39,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
       vsync: this,
       duration: const Duration(milliseconds: 480),
     );
-    _fadeAnimation = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
+    _fadeAnimation = CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic);
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.08),
+      begin: const Offset(0, 0.25),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic));
 
@@ -162,6 +167,93 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
     return map[status] ?? status[0].toUpperCase() + status.substring(1).replaceAll('_', ' ');
   }
 
+  Future<void> _generateOrderPdf(Map<String, dynamic> order) async {
+    final pdf = PdfDocument();
+    final page = pdf.pages.add();
+
+    final service = order['services'] as Map? ?? {};
+    final specialist = order['profiles'] as Map? ?? {};
+    final details = order['contract_details'] as Map? ?? {};
+
+    final date = DateTime.parse(order['created_at'] as String).toLocal();
+    final formattedDate = DateFormat('dd MMM yyyy HH:mm', 'ru').format(date);
+
+    // Заголовок
+    page.graphics.drawString(
+      'Детали заказа #${order['id']}',
+      PdfStandardFont(PdfFontFamily.helvetica, 18),
+      bounds: const Rect.fromLTWH(0, 0, 500, 50),
+    );
+
+    // Информация о специалисте
+    page.graphics.drawString(
+      'Исполнитель: ${specialist['display_name'] ?? 'Не указан'}',
+      PdfStandardFont(PdfFontFamily.helvetica, 12),
+      bounds: const Rect.fromLTWH(0, 60, 500, 20),
+    );
+
+    // Услуга и цена
+    page.graphics.drawString(
+      'Услуга: ${service['name'] ?? 'Не указана'}',
+      PdfStandardFont(PdfFontFamily.helvetica, 12),
+      bounds: const Rect.fromLTWH(0, 90, 500, 20),
+    );
+
+    // Цена
+    page.graphics.drawString(
+      'Цена: ${service['price'] ?? 'По договорённости'} BYN',
+      PdfStandardFont(PdfFontFamily.helvetica, 12),
+      bounds: const Rect.fromLTWH(0, 110, 500, 20),
+    );
+
+    // Дата создания
+    page.graphics.drawString(
+      'Дата создания: $formattedDate',
+      PdfStandardFont(PdfFontFamily.helvetica, 12),
+      bounds: const Rect.fromLTWH(0, 140, 500, 20),
+    );
+
+    // Контракт детали
+    page.graphics.drawString(
+      'Детали контракта:',
+      PdfStandardFont(PdfFontFamily.helvetica, 14),
+      bounds: const Rect.fromLTWH(0, 170, 500, 30),
+    );
+
+    double y = 200;
+    details.forEach((key, value) {
+      page.graphics.drawString(
+        '${key.toUpperCase()}: $value',
+        PdfStandardFont(PdfFontFamily.helvetica, 12),
+        bounds: Rect.fromLTWH(0, y, 500, 20),
+      );
+      y += 20;
+    });
+
+    // Статус
+    page.graphics.drawString(
+      'Статус: ${_formatStatus(order['status'])}',
+      PdfStandardFont(PdfFontFamily.helvetica, 12),
+      bounds: Rect.fromLTWH(0, y + 20, 500, 20),
+    );
+
+    // Сохранение PDF
+    final bytes = await pdf.save();
+    pdf.dispose();
+
+    final directory = await getTemporaryDirectory();
+    final filePath = '${directory.path}/order_${order['id']}.pdf';
+    final file = File(filePath);
+    await file.writeAsBytes(bytes);
+
+    final openResult = await OpenFilex.open(filePath);
+    if (openResult.type != ResultType.done) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка открытия PDF: ${openResult.message}')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -257,15 +349,16 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
                           final service = order['services'] as Map? ?? {};
                           final specialist = order['profiles'] as Map? ?? {};
                           final status = order['status'] as String?;
-                          final date = (order['created_at'] as String?)?.split('T')[0] ?? '—';
+                          final date = DateTime.parse(order['created_at'] as String).toLocal();
+                          final formattedDate = DateFormat('dd MMM yyyy HH:mm', 'ru').format(date);
                           final details = order['contract_details'] as Map? ?? {};
 
                           return Card(
                             margin: const EdgeInsets.only(bottom: 12),
-                            elevation: 16,
-                            shadowColor: Colors.black.withOpacity(0.6),
+                            elevation: 1,
+                            shadowColor: Colors.black.withOpacity(0.12),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                            color: colorScheme.surfaceContainerLow,
+                            color: colorScheme.surfaceContainerLowest,
                             child: InkWell(
                               borderRadius: BorderRadius.circular(20),
                               onTap: () {
@@ -321,21 +414,34 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
                                             ],
                                           ),
                                         ),
-                                        Chip(
-                                          label: Text(
-                                            _formatStatus(status),
-                                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                                          ),
-                                          avatar: Icon(
-                                            _getStatusIcon(status),
-                                            size: 16,
-                                            color: _getStatusColor(status, colorScheme),
-                                          ),
-                                          backgroundColor: _getStatusColor(status, colorScheme).withOpacity(0.12),
-                                          side: BorderSide.none,
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                                          visualDensity: VisualDensity.compact,
+                                        Column(
+                                          children: [
+                                            GestureDetector(
+                                              onTap: () => _generateOrderPdf(order),
+                                              child: Icon(
+                                                Icons.picture_as_pdf_rounded,
+                                                color: colorScheme.primary,
+                                                size: 28,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Chip(
+                                              label: Text(
+                                                _formatStatus(status),
+                                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                              ),
+                                              avatar: Icon(
+                                                _getStatusIcon(status),
+                                                size: 16,
+                                                color: _getStatusColor(status, colorScheme),
+                                              ),
+                                              backgroundColor: _getStatusColor(status, colorScheme).withOpacity(0.12),
+                                              side: BorderSide.none,
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                                              visualDensity: VisualDensity.compact,
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
@@ -378,7 +484,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
                                     ],
                                     const SizedBox(height: 16),
                                     Text(
-                                      'Создан: $date',
+                                      'Создан: $formattedDate',
                                       style: theme.textTheme.bodySmall?.copyWith(
                                         color: colorScheme.onSurfaceVariant,
                                       ),

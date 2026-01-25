@@ -1,7 +1,8 @@
 // lib/screens/specialist/chat_tab.dart
 import 'package:flutter/material.dart';
-import 'package:profi/screens/other/chat_specialist.dart'; // SpecialistChatScreen
-import '../../services/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
+import '../../screens/other/chat_specialist.dart'; // SpecialistChatScreen
 
 class ChatTab extends StatefulWidget {
   const ChatTab({super.key});
@@ -10,35 +11,82 @@ class ChatTab extends StatefulWidget {
   State<ChatTab> createState() => _ChatTabState();
 }
 
-class _ChatTabState extends State<ChatTab> {
-  bool _isLoading = true;
-  List<Map<String, dynamic>> _chats = [];
-  List<Map<String, dynamic>> _filteredChats = [];
+class _ChatTabState extends State<ChatTab> with SingleTickerProviderStateMixin {
+  final supabase = Supabase.instance.client;
 
-  final TextEditingController _searchController = TextEditingController();
+  List<Map<String, dynamic>> _chatPreviews = [];
+  List<Map<String, dynamic>> _filteredPreviews = [];
+
+  bool _isLoading = true;
   bool _isSearching = false;
+
+  late TextEditingController _searchController;
+  late AnimationController _searchAnimController;
+  late Animation<double> _searchFade;
 
   @override
   void initState() {
     super.initState();
+    _searchController = TextEditingController();
+
+    _searchAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    );
+    _searchFade = CurvedAnimation(
+      parent: _searchAnimController,
+      curve: Curves.easeInOut,
+    );
+
     _loadChats();
-    _searchController.addListener(_filterChats);
+
+    supabase
+        .channel('specialist-chats:${supabase.auth.currentUser?.id}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'chat_messages',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'receiver_id',
+            value: supabase.auth.currentUser?.id,
+          ),
+          callback: (_) => _loadChats(),
+        )
+        .subscribe();
+
+    _searchController.addListener(() {
+      final query = _searchController.text.toLowerCase().trim();
+      setState(() {
+        _filteredPreviews = query.isEmpty
+            ? List.from(_chatPreviews)
+            : _chatPreviews
+                .where((chat) =>
+                    (chat['clientName'] as String?)?.toLowerCase().contains(query) ?? false)
+                .toList();
+      });
+    });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchAnimController.dispose();
     super.dispose();
   }
 
   Future<void> _loadChats() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
-    try {
-      final specialistId = supabase.auth.currentUser?.id;
-      if (specialistId == null) throw Exception('Не авторизован');
+    final specialistId = supabase.auth.currentUser?.id;
+    if (specialistId == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
 
-      // 1. Получаем ID пользователей из чёрного списка
+    try {
+      // 1. Чёрный список
       final blacklistRes = await supabase
           .from('blacklists')
           .select('blacklisted_user_id')
@@ -48,16 +96,11 @@ class _ChatTabState extends State<ChatTab> {
           .map((e) => e['blacklisted_user_id'] as String)
           .toSet();
 
-      // 2. Загружаем сообщения
-      final response = await supabase
+      // 2. Сообщения (только входящие — специалист получает от клиентов)
+      final messages = await supabase
           .from('chat_messages')
           .select('''
-            id,
-            sender_id,
-            receiver_id,
-            message,
-            timestamp,
-            read,
+            id, sender_id, receiver_id, message, timestamp, read,
             profiles!sender_id (display_name, photo_url)
           ''')
           .eq('receiver_id', specialistId)
@@ -65,272 +108,234 @@ class _ChatTabState extends State<ChatTab> {
 
       final Map<String, Map<String, dynamic>> chatMap = {};
 
-      for (final msg in response) {
-        final senderId = msg['sender_id'] as String? ?? '';
-        if (senderId.isEmpty) continue;
-
-        // Пропускаем чаты с пользователями из чёрного списка
-        if (blacklistedIds.contains(senderId)) continue;
+      for (final msg in messages) {
+        final senderId = msg['sender_id'] as String?;
+        if (senderId == null || blacklistedIds.contains(senderId)) continue;
 
         final senderProfile = msg['profiles'] as Map<String, dynamic>? ?? {};
 
         DateTime? msgTime;
-        String formattedTime = '—';
         try {
-          final tsStr = msg['timestamp'] as String?;
-          if (tsStr != null && tsStr.isNotEmpty) {
-            msgTime = DateTime.parse(tsStr);
-            formattedTime = _formatTimestamp(tsStr);
-          }
-        } catch (e) {
-          debugPrint('Некорректная дата в сообщении ${msg['id']}: $e');
-        }
+          msgTime = DateTime.tryParse(msg['timestamp'] as String? ?? '');
+        } catch (_) {}
 
         if (!chatMap.containsKey(senderId)) {
           chatMap[senderId] = {
             'clientId': senderId,
-            'clientName': (senderProfile['display_name'] as String? ?? 'Клиент').toLowerCase(),
-            'clientNameOriginal': senderProfile['display_name'] as String? ?? 'Клиент',
+            'clientName': senderProfile['display_name'] as String? ?? 'Клиент',
             'clientPhoto': senderProfile['photo_url'] as String?,
-            'lastMessage': msg['message'] as String? ?? '',
-            'timestamp': formattedTime,
-            'unreadCount': 0,
-            'isOnline': false,
+            'lastMessage': msg['message'] as String? ?? '(нет текста)',
+            'timestamp': msg['timestamp'],
             'lastTimestamp': msgTime ?? DateTime(2000),
+            'isOnline': false,
           };
         }
 
         final existing = chatMap[senderId]!;
-
         if (msgTime != null && msgTime.isAfter(existing['lastTimestamp'] as DateTime)) {
           existing['lastMessage'] = msg['message'] as String? ?? '';
-          existing['timestamp'] = formattedTime;
+          existing['timestamp'] = msg['timestamp'];
           existing['lastTimestamp'] = msgTime;
         }
-
-        if (msg['read'] == false) {
-          existing['unreadCount'] = (existing['unreadCount'] as int) + 1;
-        }
       }
 
-      final allChats = chatMap.values.toList()
+      final list = chatMap.values.toList()
         ..sort((a, b) => (b['lastTimestamp'] as DateTime).compareTo(a['lastTimestamp'] as DateTime));
 
-      setState(() {
-        _chats = allChats;
-        _filteredChats = allChats;
-      });
-    } catch (e, stack) {
-      debugPrint('Ошибка загрузки чатов: $e\n$stack');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки чатов: $e'), backgroundColor: Colors.red),
-        );
+        setState(() {
+          _chatPreviews = list;
+          _filteredPreviews = List.from(list);
+          _isLoading = false;
+        });
       }
-    } finally {
+    } catch (e) {
+      debugPrint('Ошибка загрузки чатов специалиста: $e');
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _filterChats() {
-    final query = _searchController.text.trim().toLowerCase();
-
-    setState(() {
-      if (query.isEmpty) {
-        _filteredChats = List.from(_chats);
-      } else {
-        _filteredChats = _chats.where((chat) {
-          return (chat['clientName'] as String).contains(query);
-        }).toList();
-      }
-    });
-  }
-
-  String _formatTimestamp(String timestamp) {
+  String _formatTimestamp(String? timestamp) {
+    if (timestamp == null) return '—';
     try {
-      final date = DateTime.parse(timestamp);
+      final date = DateTime.parse(timestamp).toLocal();
       final now = DateTime.now();
-      final diff = now.difference(date);
-
-      if (diff.inDays == 0) {
-        return '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-      } else if (diff.inDays == 1) {
-        return 'Вчера';
-      } else if (diff.inDays < 7) {
-        return ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][date.weekday - 1];
+      if (date.isAfter(now.subtract(const Duration(days: 1)))) {
+        return DateFormat('HH:mm').format(date);
+      } else if (date.year == now.year) {
+        return DateFormat('d MMM').format(date);
       } else {
-        return '${date.day} ${[
-          'янв', 'фев', 'мар', 'апр', 'май', 'июн',
-          'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'
-        ][date.month - 1]}';
+        return DateFormat('d.MM.yy').format(date);
       }
-    } catch (e) {
+    } catch (_) {
       return '—';
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
+      backgroundColor: colorScheme.background,
       appBar: AppBar(
+        centerTitle: true,
+        backgroundColor: colorScheme.surfaceContainerLow,
+        foregroundColor: colorScheme.onSurface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Поиск по имени клиента...',
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(color: Colors.white70),
-                ),
-                style: const TextStyle(color: Colors.white),
-                onChanged: (_) => _filterChats(),
-              )
-            : const Text('Чаты'),
-        actions: [
-          if (_isSearching)
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () {
-                setState(() {
-                  _isSearching = false;
-                  _searchController.clear();
-                  _filterChats();
-                });
-              },
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.search),
-              onPressed: () {
-                setState(() => _isSearching = true);
-              },
-            ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _filteredChats.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.chat_bubble_outline, size: 80, color: Colors.grey[400]),
-                      const SizedBox(height: 16),
-                      Text(
-                        _searchController.text.isNotEmpty ? 'Чаты не найдены' : 'Нет активных чатов',
-                        style: const TextStyle(fontSize: 18),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _searchController.text.isNotEmpty
-                            ? 'Попробуйте изменить запрос'
-                            : 'Когда клиенты напишут — чаты появятся здесь',
-                        style: TextStyle(color: Colors.grey[600]),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+            ? FadeTransition(
+                opacity: _searchFade,
+                child: TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  style: TextStyle(color: colorScheme.onSurface),
+                  decoration: InputDecoration(
+                    hintText: 'Поиск по имени клиента...',
+                    hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                    border: InputBorder.none,
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadChats,
-                  child: ListView.builder(
-                    itemCount: _filteredChats.length,
+                ),
+              )
+            : Text('Чаты', style: TextStyle(color: colorScheme.onSurface),),
+        actions: [
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 280),
+            child: _isSearching
+                ? IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() {
+                        _isSearching = false;
+                        _filteredPreviews = List.from(_chatPreviews);
+                      });
+                      _searchAnimController.reverse();
+                    },
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.search_rounded),
+                    onPressed: () {
+                      setState(() => _isSearching = true);
+                      _searchAnimController.forward();
+                    },
+                  ),
+          ),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            height: 1,
+            color: colorScheme.outlineVariant.withOpacity(0.6),
+          ),
+        ),
+      ),
+      body: RefreshIndicator.adaptive(
+        onRefresh: _loadChats,
+        color: colorScheme.primary,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _filteredPreviews.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          size: 88,
+                          color: colorScheme.onSurfaceVariant.withOpacity(0.4),
+                        ),
+                        const SizedBox(height: 32),
+                        Text(
+                          _isSearching ? 'Ничего не найдено' : 'Нет активных чатов',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          _isSearching
+                              ? 'Попробуйте другое имя'
+                              : 'Когда клиенты напишут — чаты появятся здесь',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: _filteredPreviews.length,
                     itemBuilder: (context, index) {
-                      final chat = _filteredChats[index];
+                      final chat = _filteredPreviews[index];
+                      final time = _formatTimestamp(chat['timestamp'] as String?);
+                      final name = chat['clientName'] as String? ?? 'Клиент';
+                      final photo = chat['clientPhoto'] as String?;
 
-                      final displayName = chat['clientNameOriginal'] as String;
-                      final photoUrl = chat['clientPhoto'] as String?;
-                      final lastMessage = chat['lastMessage'] as String;
-                      final timestamp = chat['timestamp'] as String;
-                      final unreadCount = chat['unreadCount'] as int;
-                      final isOnline = chat['isOnline'] as bool;
-
-                      return ListTile(
-                        leading: Stack(
-                          children: [
-                            CircleAvatar(
-                              radius: 28,
-                              backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-                              child: photoUrl == null
-                                  ? Text(
-                                      displayName[0].toUpperCase(),
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context).primaryColor,
-                                      ),
-                                    )
-                                  : null,
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        elevation: 16,
+                        shadowColor: Colors.black,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        color: colorScheme.surfaceContainerLowest,
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          leading: CircleAvatar(
+                            radius: 28,
+                            backgroundColor: colorScheme.primaryContainer,
+                            foregroundImage: photo != null ? NetworkImage(photo) : null,
+                            child: photo == null
+                                ? Text(
+                                    name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                    style: TextStyle(color: colorScheme.onPrimaryContainer),
+                                  )
+                                : null,
+                          ),
+                          title: Text(
+                            name,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
                             ),
-                            if (isOnline)
-                              Positioned(
-                                right: 0,
-                                bottom: 0,
-                                child: Container(
-                                  width: 14,
-                                  height: 14,
-                                  decoration: BoxDecoration(
-                                    color: Colors.green,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 2),
-                                  ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            chat['lastMessage'] as String? ?? 'Начните общение',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          trailing: Text(
+                            time,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SpecialistChatScreen(
+                                  clientId: chat['clientId'] as String,
+                                  clientName: name,
+                                  clientPhoto: photo,
+                                  isOnline: chat['isOnline'] as bool? ?? false,
                                 ),
                               ),
-                          ],
+                            ).then((_) => _loadChats());
+                          },
                         ),
-                        title: Text(
-                          displayName,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Text(
-                          lastMessage,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                        trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              timestamp,
-                              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                            ),
-                            if (unreadCount > 0) const SizedBox(height: 6),
-                            if (unreadCount > 0)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).primaryColor,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  '$unreadCount',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => SpecialistChatScreen(
-                                clientId: chat['clientId'] as String,
-                                clientName: displayName,
-                                clientPhoto: photoUrl,
-                                isOnline: isOnline,
-                              ),
-                            ),
-                          ).then((_) => _loadChats());
-                        },
                       );
                     },
                   ),
-                ),
+      ),
     );
   }
 }

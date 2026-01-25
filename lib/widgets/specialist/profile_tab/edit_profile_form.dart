@@ -1,12 +1,11 @@
 // lib/widgets/specialist/profile_tab/edit_profile_form.dart
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:image/image.dart' as img;
-
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import '../../../services/supabase_service.dart';
-import 'change_password_dialog.dart'; // Импортируем диалог
+import 'change_password_dialog.dart';
 
 typedef OnProfileSaved = Future<void> Function(String name, String? about, String? specialty, String? photoUrl);
 
@@ -32,7 +31,7 @@ class EditProfileForm extends StatefulWidget {
   State<EditProfileForm> createState() => _EditProfileFormState();
 }
 
-class _EditProfileFormState extends State<EditProfileForm> {
+class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProviderStateMixin {
   late TextEditingController _nameController;
   late TextEditingController _aboutController;
   late TextEditingController _specialtyController;
@@ -42,14 +41,33 @@ class _EditProfileFormState extends State<EditProfileForm> {
 
   bool _isSaving = false;
 
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
   static const int maxFileSizeBytes = 1024 * 1024;
 
   @override
   void initState() {
     super.initState();
+
     _nameController = TextEditingController(text: widget.initialName);
     _aboutController = TextEditingController(text: widget.initialAbout ?? '');
     _specialtyController = TextEditingController(text: widget.initialSpecialty ?? '');
+
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 480),
+    );
+    _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic);
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.25),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic));
+
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (mounted) _fadeController.forward();
+    });
   }
 
   @override
@@ -57,6 +75,7 @@ class _EditProfileFormState extends State<EditProfileForm> {
     _nameController.dispose();
     _aboutController.dispose();
     _specialtyController.dispose();
+    _fadeController.dispose();
     super.dispose();
   }
 
@@ -102,13 +121,16 @@ class _EditProfileFormState extends State<EditProfileForm> {
       await supabase.storage.from('profile').upload(fileName, _newPhotoFile!);
       return supabase.storage.from('profile').getPublicUrl(fileName);
     } catch (e) {
+      debugPrint('Ошибка загрузки фото: $e');
       return widget.initialPhotoUrl;
     }
   }
 
   Future<void> _save() async {
     if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Имя не может быть пустым')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Имя не может быть пустым')),
+      );
       return;
     }
 
@@ -127,7 +149,11 @@ class _EditProfileFormState extends State<EditProfileForm> {
         newPhotoUrl,
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка сохранения: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -135,94 +161,189 @@ class _EditProfileFormState extends State<EditProfileForm> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          GestureDetector(
-            onTap: _pickAndCompressPhoto,
-            child: Stack(
-              alignment: Alignment.bottomRight,
-              children: [
-                CircleAvatar(
-                  radius: 80,
-                  backgroundColor: colorScheme.primary.withOpacity(0.1),
-                  backgroundImage: _newPhotoFile != null
-                      ? FileImage(_newPhotoFile!)
-                      : (widget.initialPhotoUrl != null ? NetworkImage(widget.initialPhotoUrl!) : null),
-                  child: (_newPhotoFile == null && widget.initialPhotoUrl == null)
-                      ? Text(
-                          _nameController.text[0].toUpperCase(),
-                          style: TextStyle(fontSize: 64, color: colorScheme.primary),
-                        )
-                      : null,
-                ),
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: colorScheme.primary,
-                  child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Имя',
-              prefixIcon: Icon(Icons.person),
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _specialtyController,
-            decoration: const InputDecoration(
-              labelText: 'Специальность',
-              prefixIcon: Icon(Icons.work),
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _aboutController,
-            maxLines: 6,
-            decoration: const InputDecoration(
-              labelText: 'О себе',
-              prefixIcon: Icon(Icons.info),
-              border: OutlineInputBorder(),
-              alignLabelWithHint: true,
-            ),
-          ),
-          const SizedBox(height: 32),
-          OutlinedButton.icon(
-            onPressed: () => ChangePasswordDialog.show(context),
-            icon: const Icon(Icons.key),
-            label: const Text('Сменить пароль'),
-          ),
-          const SizedBox(height: 32),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: widget.onCancel,
-                  child: const Text('Отмена'),
+    return Scaffold(
+      backgroundColor: colorScheme.background,
+      appBar: AppBar(
+        title: const Text('Редактировать профиль'),
+        centerTitle: true,
+        backgroundColor: colorScheme.surfaceContainerLow,
+        foregroundColor: colorScheme.onSurface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+      ),
+      body: SafeArea(
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+              child: Card(
+                elevation: 16,
+                shadowColor: colorScheme.shadow.withOpacity(0.30),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                color: colorScheme.surfaceContainerLow,
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Аватар
+                      Center(
+                        child: GestureDetector(
+                          onTap: _pickAndCompressPhoto,
+                          child: Stack(
+                            alignment: Alignment.bottomRight,
+                            children: [
+                              CircleAvatar(
+                                radius: 80,
+                                backgroundColor: colorScheme.primaryContainer,
+                                foregroundImage: _newPhotoFile != null
+                                    ? FileImage(_newPhotoFile!)
+                                    : (widget.initialPhotoUrl != null ? NetworkImage(widget.initialPhotoUrl!) : null),
+                                child: (_newPhotoFile == null && widget.initialPhotoUrl == null)
+                                    ? Text(
+                                        _nameController.text.isNotEmpty
+                                            ? _nameController.text[0].toUpperCase()
+                                            : 'М',
+                                        style: TextStyle(
+                                          fontSize: 64,
+                                          fontWeight: FontWeight.bold,
+                                          color: colorScheme.onPrimaryContainer,
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                              CircleAvatar(
+                                radius: 24,
+                                backgroundColor: colorScheme.primary,
+                                child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 24),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+
+                      // Поля ввода
+                      TextField(
+                        controller: _nameController,
+                        decoration: InputDecoration(
+                          labelText: 'Имя *',
+                          prefixIcon: const Icon(Icons.person_rounded),
+                          filled: true,
+                          fillColor: colorScheme.surfaceContainerHighest,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      TextField(
+                        controller: _specialtyController,
+                        decoration: InputDecoration(
+                          labelText: 'Специальность',
+                          prefixIcon: const Icon(Icons.work_rounded),
+                          filled: true,
+                          fillColor: colorScheme.surfaceContainerHighest,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      TextField(
+                        controller: _aboutController,
+                        maxLines: 6,
+                        minLines: 4,
+                        decoration: InputDecoration(
+                          labelText: 'О себе',
+                          prefixIcon: const Icon(Icons.info_outline_rounded),
+                          filled: true,
+                          fillColor: colorScheme.surfaceContainerHighest,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          alignLabelWithHint: true,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Сменить пароль
+                      OutlinedButton.icon(
+                        onPressed: () => ChangePasswordDialog.show(context),
+                        icon: const Icon(Icons.key_rounded),
+                        label: const Text('Сменить пароль'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: colorScheme.primary,
+                          side: BorderSide(color: colorScheme.outline),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 2,
+                          shadowColor: colorScheme.shadow.withOpacity(0.18),
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+
+                      // Кнопки действий
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _isSaving ? null : widget.onCancel,
+                              child: const Text('Отмена'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: colorScheme.onSurfaceVariant,
+                                side: BorderSide(color: colorScheme.outline),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                elevation: 2,
+                                shadowColor: colorScheme.shadow.withOpacity(0.18),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: _isSaving ? null : _save,
+                              child: _isSaving
+                                  ? SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        color: colorScheme.onPrimary,
+                                      ),
+                                    )
+                                  : const Text('Сохранить'),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: colorScheme.primary,
+                                foregroundColor: colorScheme.onPrimary,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                elevation: 4,
+                                shadowColor: colorScheme.primary.withOpacity(0.4),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _isSaving ? null : _save,
-                  child: _isSaving
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Сохранить'),
-                ),
-              ),
-            ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
