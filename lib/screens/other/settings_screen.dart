@@ -1,10 +1,122 @@
 // lib/screens/other/settings_screen.dart
 import 'package:flutter/material.dart';
+import 'package:profi/main.dart';
 import 'package:provider/provider.dart';
-import '../../providers/theme_provider.dart'; // создадим этот файл ниже
+import '../../providers/theme_provider.dart';
+import '../../widgets/other/settings_screen/settings_section_header.dart';
+import '../../widgets/other/settings_screen/theme_selector_bottom_sheet.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+
+  Future<void> _deleteAccount(BuildContext context) async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Удалить аккаунт навсегда?'),
+        content: const Text(
+          'Все ваши данные будут безвозвратно удалены:\n'
+          '• профиль\n'
+          '• заказы\n'
+          '• отзывы\n'
+          '• сообщения\n'
+          '• сохранённые услуги\n'
+          '• документы и услуги (если вы специалист)\n\n'
+          'Действие нельзя отменить.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'Удалить',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      // Показываем индикатор
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Удаление аккаунта...'),
+          duration: Duration(seconds: 10),
+        ),
+      );
+
+      // 1. Удаляем данные, где пользователь — заказчик
+      await supabase.from('orders').delete().eq('user_id', user.id);
+      await supabase.from('reviews').delete().eq('user_id', user.id);
+      await supabase.from('saved_services').delete().eq('user_id', user.id);
+      await supabase
+          .from('chat_messages')
+          .delete()
+          .or('sender_id.eq.${user.id},receiver_id.eq.${user.id}');
+
+      // 2. Если пользователь — специалист, удаляем связанные данные
+      final profile = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+      if (profile['role'] == 'specialist') {
+        // Удаляем фото услуг → услуги → документы → заказы и отзывы как specialist
+        final services = await supabase
+            .from('services')
+            .select('id')
+            .eq('specialist_id', user.id);
+        final serviceIds = services.map((s) => s['id']).toList();
+
+        if (serviceIds.isNotEmpty) {
+          await supabase
+              .from('service_photos')
+              .delete()
+              .inFilter('service_id', serviceIds);
+        }
+
+        await supabase.from('services').delete().eq('specialist_id', user.id);
+        await supabase.from('documents').delete().eq('specialist_id', user.id);
+        await supabase.from('orders').delete().eq('specialist_id', user.id);
+        await supabase.from('reviews').delete().eq('specialist_id', user.id);
+      }
+
+      // 3. Удаляем сам профиль
+      await supabase.from('profiles').delete().eq('id', user.id);
+
+      // 4. Удаляем пользователя из auth
+      await supabase.auth.admin.deleteUser(user.id);
+
+      // 5. Выход
+      await supabase.auth.signOut();
+
+      if (context.mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/auth', (route) => false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Аккаунт и все данные удалены')),
+        );
+      }
+    } catch (e, stack) {
+      debugPrint('Ошибка удаления: $e\n$stack');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка при удалении: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,17 +139,7 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         children: [
           // Секция "Внешний вид"
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-            child: Text(
-              'Внешний вид',
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: colorScheme.primary,
-              ),
-            ),
-          ),
-
+          const SettingsSectionHeader(title: 'Внешний вид'),
           ListTile(
             leading: Icon(Icons.palette_outlined, color: colorScheme.primary),
             title: const Text('Тема приложения'),
@@ -45,9 +147,11 @@ class SettingsScreen extends StatelessWidget {
               currentMode == ThemeMode.light
                   ? 'Светлая'
                   : currentMode == ThemeMode.dark
-                      ? 'Тёмная'
-                      : 'Системная',
-              style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+                  ? 'Тёмная'
+                  : 'Системная',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
             trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
             onTap: () {
@@ -65,86 +169,74 @@ class SettingsScreen extends StatelessWidget {
           const Divider(height: 32, indent: 16, endIndent: 16),
 
           // Секция "Аккаунт и безопасность"
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Text(
-              'Аккаунт и безопасность',
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: colorScheme.primary,
-              ),
-            ),
-          ),
-
+          const SettingsSectionHeader(title: 'Аккаунт и безопасность'),
           ListTile(
-            leading: Icon(Icons.delete_forever_rounded, color: colorScheme.error),
+            leading: Icon(
+              Icons.delete_forever_rounded,
+              color: colorScheme.error,
+            ),
             title: const Text('Удалить аккаунт'),
-            subtitle: Text(
+            subtitle: const Text(
               'Удаляет все данные без возможности восстановления',
-              style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
             ),
             trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Функция в разработке'),
-                  backgroundColor: colorScheme.error,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              );
-            },
+            onTap: () => _deleteAccount(context),
           ),
 
           const Divider(height: 32, indent: 16, endIndent: 16),
 
           // Секция "Поддержка и информация"
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Text(
-              'Поддержка и информация',
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: colorScheme.primary,
-              ),
-            ),
-          ),
-
+          const SettingsSectionHeader(title: 'Поддержка и информация'),
           ListTile(
-            leading: Icon(Icons.support_agent_rounded, color: colorScheme.primary),
+            leading: Icon(
+              Icons.support_agent_rounded,
+              color: colorScheme.primary,
+            ),
             title: const Text('Служба поддержки'),
             subtitle: const Text('Чат, email или звонок'),
             trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Text('Связь со службой поддержки (в разработке)'),
+                  content: const Text(
+                    'Связь со службой поддержки (в разработке)',
+                  ),
                   backgroundColor: colorScheme.primary,
                   behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               );
             },
           ),
-
           ListTile(
-            leading: Icon(Icons.privacy_tip_rounded, color: colorScheme.primary),
+            leading: Icon(
+              Icons.privacy_tip_rounded,
+              color: colorScheme.primary,
+            ),
             title: const Text('Политика конфиденциальности'),
             trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: const Text('Открытие политики (в разработке)')),
+                const SnackBar(
+                  content: Text('Открытие политики (в разработке)'),
+                ),
               );
             },
           ),
-
           ListTile(
-            leading: Icon(Icons.description_rounded, color: colorScheme.primary),
+            leading: Icon(
+              Icons.description_rounded,
+              color: colorScheme.primary,
+            ),
             title: const Text('Условия использования'),
             trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: const Text('Открытие условий (в разработке)')),
+                const SnackBar(
+                  content: const Text('Открытие условий (в разработке)'),
+                ),
               );
             },
           ),
@@ -158,11 +250,13 @@ class SettingsScreen extends StatelessWidget {
               children: [
                 Text(
                   'Версия 1.0.0',
-                  style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Найди Мастера © 2025–2026',
+                  'ProWirkSearch',
                   style: textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant.withOpacity(0.7),
                   ),
@@ -170,73 +264,6 @@ class SettingsScreen extends StatelessWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// Bottom Sheet для выбора темы
-class ThemeSelectorBottomSheet extends StatelessWidget {
-  const ThemeSelectorBottomSheet({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final currentMode = themeProvider.themeMode;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-            child: Text(
-              'Выберите тему',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.primary,
-                  ),
-            ),
-          ),
-          RadioListTile<ThemeMode>(
-            value: ThemeMode.system,
-            groupValue: currentMode,
-            onChanged: (value) {
-              if (value != null) {
-                themeProvider.setThemeMode(value);
-              }
-              Navigator.pop(context);
-            },
-            title: const Text('Системная'),
-            subtitle: const Text('Следует настройкам устройства'),
-            secondary: const Icon(Icons.settings_suggest_rounded),
-            activeColor: colorScheme.primary,
-          ),
-          RadioListTile<ThemeMode>(
-            value: ThemeMode.light,
-            groupValue: currentMode,
-            onChanged: (value) {
-              if (value != null) themeProvider.setThemeMode(value);
-              Navigator.pop(context);
-            },
-            title: const Text('Светлая'),
-            secondary: const Icon(Icons.light_mode_rounded),
-            activeColor: colorScheme.primary,
-          ),
-          RadioListTile<ThemeMode>(
-            value: ThemeMode.dark,
-            groupValue: currentMode,
-            onChanged: (value) {
-              if (value != null) themeProvider.setThemeMode(value);
-              Navigator.pop(context);
-            },
-            title: const Text('Тёмная'),
-            secondary: const Icon(Icons.dark_mode_rounded),
-            activeColor: colorScheme.primary,
-          ),
-          const SizedBox(height: 24),
         ],
       ),
     );

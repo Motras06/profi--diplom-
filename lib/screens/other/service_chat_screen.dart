@@ -1,5 +1,7 @@
 // lib/screens/other/chat_screen.dart (или lib/screens/specialist/chat_screen.dart)
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:profi/screens/other/specialist_profile.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 
@@ -7,17 +9,14 @@ class ServiceChatScreen extends StatefulWidget {
   final Map<String, dynamic> specialist;
   final Map<String, dynamic>? service;
 
-  const ServiceChatScreen({
-    super.key,
-    required this.specialist,
-    this.service,
-  });
+  const ServiceChatScreen({super.key, required this.specialist, this.service});
 
   @override
   State<ServiceChatScreen> createState() => _ServiceChatScreenState();
 }
 
-class _ServiceChatScreenState extends State<ServiceChatScreen> {
+class _ServiceChatScreenState extends State<ServiceChatScreen>
+    with SingleTickerProviderStateMixin {
   final supabase = Supabase.instance.client;
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
@@ -28,12 +27,34 @@ class _ServiceChatScreenState extends State<ServiceChatScreen> {
   List<Map<String, dynamic>> _messages = [];
   bool _isLoading = true;
 
-  RealtimeChannel? _channel; // сохраняем канал для отписки
+  RealtimeChannel? _channel;
+
+  late AnimationController _animController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
+
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOut,
+    );
+
     _initializeChat();
+  }
+
+  @override
+  void dispose() {
+    _channel?.unsubscribe();
+    _messageController.dispose();
+    _scrollController.dispose();
+    _animController.dispose();
+    super.dispose();
   }
 
   Future<void> _initializeChat() async {
@@ -43,20 +64,18 @@ class _ServiceChatScreenState extends State<ServiceChatScreen> {
     if (_currentUserId == null || _specialistId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ошибка: не удалось определить участников чата')),
+          const SnackBar(
+            content: Text('Ошибка: не удалось определить участников чата'),
+          ),
         );
       }
       return;
     }
 
-    debugPrint('Чат открыт: user=$_currentUserId → specialist=$_specialistId');
-
-    // 1. Загружаем историю
     await _loadInitialMessages();
 
-    // 2. Подписка на realtime (один канал + фильтрация внутри)
     _channel = supabase
-        .channel('chat:${_currentUserId}_$_specialistId')
+        .channel('private-chat:${_currentUserId}_$_specialistId')
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
@@ -66,21 +85,16 @@ class _ServiceChatScreenState extends State<ServiceChatScreen> {
             final sender = newMsg['sender_id'] as String?;
             final receiver = newMsg['receiver_id'] as String?;
 
-            // Только сообщения между нами
             if ((sender == _currentUserId && receiver == _specialistId) ||
                 (sender == _specialistId && receiver == _currentUserId)) {
-              
-              // Добавляем только если id ещё нет в списке
               if (!_messages.any((m) => m['id'] == newMsg['id'])) {
-                debugPrint('Realtime: добавлено сообщение id=${newMsg['id']} от $sender');
                 if (mounted) {
                   setState(() {
                     _messages.add(newMsg);
                   });
                   _scrollToBottom();
+                  _animController.forward(from: 0.0);
                 }
-              } else {
-                debugPrint('Realtime: сообщение id=${newMsg['id']} уже существует → пропускаем');
               }
             }
           },
@@ -91,7 +105,6 @@ class _ServiceChatScreenState extends State<ServiceChatScreen> {
   }
 
   Future<void> _loadInitialMessages() async {
-    debugPrint('Загрузка истории сообщений');
     try {
       final messages = await supabase
           .from('chat_messages')
@@ -103,24 +116,25 @@ class _ServiceChatScreenState extends State<ServiceChatScreen> {
           .order('timestamp', ascending: true)
           .limit(100);
 
-      debugPrint('История загружена: ${messages.length} сообщений');
-
       if (mounted) {
         setState(() {
           _messages = List<Map<String, dynamic>>.from(messages);
         });
         _scrollToBottom(animate: false);
+
+        // ← Вот это главное исправление
+        if (_messages.isNotEmpty) {
+          _animController.forward(from: 0.0);
+        }
       }
-    } catch (e, stack) {
-      debugPrint('Ошибка загрузки истории: $e\n$stack');
+    } catch (e) {
+      debugPrint('Ошибка загрузки сообщений: $e');
     }
   }
 
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
-
-    debugPrint('Отправка сообщения: "$text"');
 
     try {
       await supabase.from('chat_messages').insert({
@@ -132,13 +146,11 @@ class _ServiceChatScreenState extends State<ServiceChatScreen> {
       });
 
       _messageController.clear();
-      // Сообщение придёт через realtime и добавится один раз
-    } catch (e, stack) {
-      debugPrint('Ошибка отправки: $e\n$stack');
+    } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка отправки: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Не удалось отправить: $e')));
       }
     }
   }
@@ -146,15 +158,15 @@ class _ServiceChatScreenState extends State<ServiceChatScreen> {
   void _scrollToBottom({bool animate = true}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) return;
-      final position = _scrollController.position.maxScrollExtent;
+      final pos = _scrollController.position.maxScrollExtent;
       if (animate) {
         _scrollController.animateTo(
-          position,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
+          pos,
+          duration: const Duration(milliseconds: 320),
+          curve: Curves.easeOutCubic,
         );
       } else {
-        _scrollController.jumpTo(position);
+        _scrollController.jumpTo(pos);
       }
     });
   }
@@ -169,39 +181,144 @@ class _ServiceChatScreenState extends State<ServiceChatScreen> {
     }
   }
 
+  Future<void> _copyMessage(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Сообщение скопировано'),
+          duration: const Duration(milliseconds: 1500),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _showMessageContextMenu(String messageText) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Действия с сообщением',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.content_copy_rounded),
+            title: const Text('Копировать'),
+            onTap: () {
+              _copyMessage(messageText);
+              Navigator.pop(context);
+            },
+          ),
+          // Можно добавить позже: "Ответить", "Удалить" (если своё), "Пожаловаться" и т.д.
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final name = widget.specialist['display_name'] ?? 'Мастер';
     final specialty = widget.specialist['specialty'] ?? '';
     final photoUrl = widget.specialist['photo_url'] as String?;
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-              child: photoUrl == null
-                  ? Text(
-                      name.isNotEmpty ? name[0].toUpperCase() : '?',
-                      style: const TextStyle(fontSize: 16),
-                    )
-                  : null,
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        titleSpacing: 0,
+        centerTitle: false, // ← важно, чтобы Row занимал место слева
+        backgroundColor: colorScheme.surfaceContainerLow,
+        foregroundColor: colorScheme.onSurface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            height: 1,
+            color: colorScheme.outlineVariant.withOpacity(0.6),
+          ),
+        ),
+        title: InkWell(
+          // ← здесь добавляем кликабельность
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    SpecialistProfileScreen(specialist: widget.specialist),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(name, style: const TextStyle(fontSize: 18)),
-                if (specialty.isNotEmpty)
-                  Text(
-                    specialty,
-                    style: const TextStyle(fontSize: 12, color: Colors.white70),
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: colorScheme.primaryContainer,
+                  foregroundImage: photoUrl != null
+                      ? NetworkImage(photoUrl)
+                      : null,
+                  child: photoUrl == null
+                      ? Text(
+                          name.isNotEmpty ? name[0].toUpperCase() : '?',
+                          style: TextStyle(
+                            color: colorScheme.onPrimaryContainer,
+                          ),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (specialty.isNotEmpty)
+                        Text(
+                          specialty,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
                   ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ],
             ),
-          ],
+          ),
         ),
       ),
       body: _isLoading
@@ -209,71 +326,139 @@ class _ServiceChatScreenState extends State<ServiceChatScreen> {
           : Column(
               children: [
                 Expanded(
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = _messages[index];
-                      final isMe = msg['sender_id'] == _currentUserId;
-                      final text = msg['message'] as String? ?? '';
-                      final time = _formatTime(msg['timestamp'] as String?);
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      reverse: false,
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = _messages[index];
+                        final isMe = msg['sender_id'] == _currentUserId;
+                        final text = msg['message'] as String? ?? '';
+                        final time = _formatTime(msg['timestamp'] as String?);
 
-                      return Align(
-                        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 6),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: isMe ? Theme.of(context).colorScheme.primary : Colors.grey[200],
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                text,
-                                style: TextStyle(color: isMe ? Colors.white : Colors.black87),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                time,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: isMe ? Colors.white70 : Colors.grey[600],
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: GestureDetector(
+                            onLongPress: () {
+                              if (text.isNotEmpty) {
+                                _showMessageContextMenu(text);
+                              }
+                            },
+                            child: Align(
+                              alignment: isMe
+                                  ? Alignment.centerRight
+                                  : Alignment.centerLeft,
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth:
+                                      MediaQuery.of(context).size.width * 0.75,
+                                ),
+                                child: Material(
+                                  elevation: isMe ? 1 : 0.5,
+                                  shadowColor: Colors.black.withOpacity(0.12),
+                                  color: isMe
+                                      ? colorScheme.primaryContainer
+                                      : colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: const Radius.circular(20),
+                                    topRight: const Radius.circular(20),
+                                    bottomLeft: Radius.circular(isMe ? 20 : 4),
+                                    bottomRight: Radius.circular(isMe ? 4 : 20),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: isMe
+                                          ? CrossAxisAlignment.end
+                                          : CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          text,
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                color: isMe
+                                                    ? colorScheme
+                                                          .onPrimaryContainer
+                                                    : colorScheme.onSurface,
+                                              ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          time,
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                                color: isMe
+                                                    ? colorScheme
+                                                          .onPrimaryContainer
+                                                          .withOpacity(0.7)
+                                                    : colorScheme
+                                                          .onSurfaceVariant,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(12),
+
+                // Поле ввода — M3 Filled + круглая кнопка
+                Container(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface,
+                    border: Border(
+                      top: BorderSide(
+                        color: colorScheme.outlineVariant,
+                        width: 1,
+                      ),
+                    ),
+                  ),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(
                         child: TextField(
                           controller: _messageController,
+                          minLines: 1,
+                          maxLines: 5,
+                          textCapitalization: TextCapitalization.sentences,
                           decoration: InputDecoration(
-                            hintText: 'Напишите сообщение...',
+                            hintText: 'Сообщение...',
+                            filled: true,
+                            fillColor: colorScheme.surfaceContainerHighest,
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
+                              borderRadius: BorderRadius.circular(24),
                               borderSide: BorderSide.none,
                             ),
-                            filled: true,
-                            fillColor: Colors.grey[200],
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 14,
+                            ),
                           ),
                           onSubmitted: (_) => _sendMessage(),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.send, color: Colors.blue),
+                      const SizedBox(width: 12),
+                      FloatingActionButton.small(
                         onPressed: _sendMessage,
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                        elevation: 2,
+                        shape: const CircleBorder(),
+                        child: const Icon(Icons.send_rounded),
                       ),
                     ],
                   ),
@@ -281,16 +466,5 @@ class _ServiceChatScreenState extends State<ServiceChatScreen> {
               ],
             ),
     );
-  }
-
-  @override
-  void dispose() {
-    // Самое важное — отписываемся от канала!
-    _channel?.unsubscribe();
-    debugPrint('dispose: отписка от realtime-канала выполнена');
-
-    _messageController.dispose();
-    _scrollController.dispose();
-    super.dispose();
   }
 }

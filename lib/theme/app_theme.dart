@@ -37,7 +37,7 @@ class AppTheme {
 
       // Контейнеры для иерархии
       surfaceContainerLowest: const Color(0xFFFFFFFF),
-      surfaceContainerLow: const Color(0xFFF5FEFD),
+      surfaceContainerLow: const Color.fromARGB(255, 224, 235, 235),
       surfaceContainer: const Color(0xFFECFAF8),
       surfaceContainerHighest: const Color(0xFFE0F7F5),
     ),

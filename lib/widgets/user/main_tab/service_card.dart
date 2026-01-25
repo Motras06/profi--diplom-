@@ -92,7 +92,7 @@ class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStat
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         elevation: 0,
-        color: colorScheme.surfaceContainerLowest,
+        color: colorScheme.surfaceContainerLow,
         margin: EdgeInsets.zero,
         child: InkWell(
           onTap: () {

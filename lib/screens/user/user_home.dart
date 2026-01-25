@@ -25,8 +25,8 @@ class _UserHomeState extends State<UserHome> {
     _pages = [
       const MainTab(),
       const SavedTab(),
-      const UserProfileTab(),
       const UserChatTab(),
+      const UserProfileTab(),
     ];
   }
 
@@ -54,7 +54,8 @@ class _UserHomeState extends State<UserHome> {
         duration: const Duration(milliseconds: 350),
         switchInCurve: Curves.easeOutCubic,
         switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
+        transitionBuilder: (child, animation) =>
+            FadeTransition(opacity: animation, child: child),
         child: KeyedSubtree(
           key: ValueKey<int>(_selectedIndex),
           child: _pages[_selectedIndex],
@@ -109,14 +110,14 @@ class _UserHomeState extends State<UserHome> {
                     label: 'Сохранённые',
                   ),
                   NavigationDestination(
-                    icon: const Icon(Icons.person_outline_rounded),
-                    selectedIcon: const Icon(Icons.person_rounded),
-                    label: 'Профиль',
-                  ),
-                  NavigationDestination(
                     icon: const Icon(Icons.chat_bubble_outline_rounded),
                     selectedIcon: const Icon(Icons.chat_bubble_rounded),
                     label: 'Чаты',
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.person_outline_rounded),
+                    selectedIcon: const Icon(Icons.person_rounded),
+                    label: 'Профиль',
                   ),
                 ],
               ),

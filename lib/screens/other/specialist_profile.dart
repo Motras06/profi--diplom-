@@ -1,68 +1,309 @@
 // lib/screens/other/specialist_profile.dart
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../screens/other/service_chat_screen.dart';
+import '../../widgets/specialist/profile_tab/documents.dart'; // твой экран документов
+import '../../widgets/specialist/profile_tab/reviews.dart';   // твой экран отзывов
 
-class SpecialistProfileScreen extends StatelessWidget {
+class SpecialistProfileScreen extends StatefulWidget {
   final Map<String, dynamic> specialist;
 
   const SpecialistProfileScreen({super.key, required this.specialist});
 
   @override
+  State<SpecialistProfileScreen> createState() => _SpecialistProfileScreenState();
+}
+
+class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
+  final supabase = Supabase.instance.client;
+
+  List<Map<String, dynamic>> _pinnedDocuments = [];
+  bool _isLoadingDocs = true;
+  bool _isLoadingReviews = true;
+  double _averageRating = 0.0;
+  int _totalReviews = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPinnedDocuments();
+    _loadReviewsStats();
+  }
+
+  Future<void> _loadPinnedDocuments() async {
+    try {
+      final docs = await supabase
+          .from('documents')
+          .select('id, name, file_url, description, created_at')
+          .eq('specialist_id', widget.specialist['id'])
+          .order('created_at', ascending: false)
+          .limit(3);
+
+      if (mounted) {
+        setState(() {
+          _pinnedDocuments = List<Map<String, dynamic>>.from(docs);
+          _isLoadingDocs = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Ошибка загрузки документов: $e');
+      if (mounted) setState(() => _isLoadingDocs = false);
+    }
+  }
+
+  Future<void> _loadReviewsStats() async {
+    try {
+      final reviews = await supabase
+          .from('reviews')
+          .select('rating')
+          .eq('specialist_id', widget.specialist['id']);
+
+      final total = reviews.length;
+      final sum = reviews.fold<double>(0.0, (s, r) => s + (r['rating'] as int? ?? 0));
+
+      if (mounted) {
+        setState(() {
+          _averageRating = total > 0 ? sum / total : 0.0;
+          _totalReviews = total;
+          _isLoadingReviews = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Ошибка загрузки статистики отзывов: $e');
+      if (mounted) setState(() => _isLoadingReviews = false);
+    }
+  }
+
+  void _openChat() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ServiceChatScreen(
+          specialist: widget.specialist,
+          service: null, // можно передать услугу, если нужно
+        ),
+      ),
+    );
+  }
+
+  void _openAllDocuments() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SpecialistDocuments(),
+      ),
+    );
+  }
+
+  void _openAllReviews() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SpecialistReviews(),
+      ),
+    );
+  }
+
+  Widget _buildStars(double rating) {
+    final full = rating.floor();
+    final half = rating - full >= 0.5;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) {
+        if (i < full) return const Icon(Icons.star_rounded, color: Colors.amber, size: 20);
+        if (i == full && half) return const Icon(Icons.star_half_rounded, color: Colors.amber, size: 20);
+        return const Icon(Icons.star_border_rounded, color: Colors.grey, size: 20);
+      }),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final name = widget.specialist['display_name'] ?? 'Мастер';
+    final photoUrl = widget.specialist['photo_url'] as String?;
+    final specialty = widget.specialist['specialty'] as String?;
+    final about = widget.specialist['about'] as String?;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(specialist['display_name'] ?? 'Профиль мастера'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
+        title: Text(name),
+        centerTitle: true,
+        elevation: 0,
+        scrolledUnderElevation: 2,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            CircleAvatar(
-              radius: 60,
-              backgroundImage: specialist['photo_url'] != null ? NetworkImage(specialist['photo_url']) : null,
-              child: specialist['photo_url'] == null
-                  ? Text(
-                      (specialist['display_name'] as String?)?.substring(0, 1).toUpperCase() ?? 'М',
-                      style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
-                    )
-                  : null,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              specialist['display_name'] ?? 'Мастер',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            if (specialist['specialty'] != null)
-              Text(
-                specialist['specialty'],
-                style: TextStyle(fontSize: 18, color: Colors.grey[700]),
-              ),
-            const SizedBox(height: 24),
-            if (specialist['about'] != null)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  Hero(
+                    tag: 'avatar-${widget.specialist['id']}',
+                    child: CircleAvatar(
+                      radius: 64,
+                      backgroundColor: colorScheme.primaryContainer,
+                      foregroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                      child: photoUrl == null
+                          ? Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : 'М',
+                              style: TextStyle(
+                                fontSize: 56,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onPrimaryContainer,
+                              ),
+                            )
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    name,
+                    style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  if (specialty != null && specialty.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      specialty,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('О себе', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 8),
-                      Text(specialist['about'], style: const TextStyle(fontSize: 16)),
+                      _buildStars(_averageRating),
+                      const SizedBox(width: 12),
+                      Text(
+                        _totalReviews > 0
+                            ? '${_averageRating.toStringAsFixed(1)} ($_totalReviews)'
+                            : 'Нет оценок',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                     ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Кнопка "Написать"
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              child: FilledButton.icon(
+                onPressed: _openChat,
+                icon: const Icon(Icons.message_rounded),
+                label: const Text('Написать сообщение'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(56),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+            ),
+          ),
+
+          // О себе
+          if (about != null && about.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Card(
+                  elevation: 1,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'О себе',
+                          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          about,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            height: 1.5,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            const SizedBox(height: 32),
-            const Text(
-              'Здесь будут отзывы, услуги и кнопка "Написать"',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-              textAlign: TextAlign.center,
             ),
-          ],
-        ),
+
+          // Закреплённые документы (3 шт)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Документы',
+                    style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  if (_pinnedDocuments.isNotEmpty)
+                    TextButton(
+                      onPressed: _openAllDocuments,
+                      child: const Text('Все'),
+                    ),
+                ],
+              ),
+            ),
+          ),
+
+          if (_isLoadingDocs)
+            const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()))
+          else if (_pinnedDocuments.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Center(
+                  child: Text(
+                    'Нет загруженных документов',
+                    style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
+                  ),
+                ),
+              ),
+            )
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final doc = _pinnedDocuments[index];
+                  final name = doc['name'] as String? ?? 'Документ';
+                  final url = doc['file_url'] as String?;
+
+                  return ListTile(
+                    leading: Icon(Icons.description_rounded, color: colorScheme.primary),
+                    title: Text(name),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.download_rounded),
+                      onPressed: () {
+                        // Здесь можно добавить логику скачивания/открытия, как в SpecialistDocuments
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Скачивание: $name')),
+                        );
+                      },
+                    ),
+                  );
+                },
+                childCount: _pinnedDocuments.length.clamp(0, 3),
+              ),
+            ),
+          const SliverToBoxAdapter(child: SizedBox(height: 40)),
+        ],
       ),
     );
   }

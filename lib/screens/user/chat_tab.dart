@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
-import '../../screens/other/service_chat_screen.dart'; // твой чат-экран
+import '../../screens/other/service_chat_screen.dart';
 
 class UserChatTab extends StatefulWidget {
   const UserChatTab({super.key});
@@ -11,22 +11,36 @@ class UserChatTab extends StatefulWidget {
   State<UserChatTab> createState() => _UserChatTabState();
 }
 
-class _UserChatTabState extends State<UserChatTab> {
+class _UserChatTabState extends State<UserChatTab>
+    with SingleTickerProviderStateMixin {
   final supabase = Supabase.instance.client;
 
   List<Map<String, dynamic>> _chatPreviews = [];
   List<Map<String, dynamic>> _filteredPreviews = [];
 
   bool _isLoading = true;
-  final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
+
+  late TextEditingController _searchController;
+  late AnimationController _searchAnimController;
+  late Animation<double> _searchFade;
 
   @override
   void initState() {
     super.initState();
+    _searchController = TextEditingController();
+
+    _searchAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    );
+    _searchFade = CurvedAnimation(
+      parent: _searchAnimController,
+      curve: Curves.easeInOut,
+    );
+
     _loadChatPreviews();
 
-    // Подписка на новые сообщения
     supabase
         .channel('user-chats:${supabase.auth.currentUser?.id}')
         .onPostgresChanges(
@@ -38,29 +52,37 @@ class _UserChatTabState extends State<UserChatTab> {
             column: 'receiver_id',
             value: supabase.auth.currentUser?.id,
           ),
-          callback: (payload) {
-            _loadChatPreviews();
-                    },
+          callback: (_) => _loadChatPreviews(),
         )
         .subscribe();
 
-    // Реактивный поиск
     _searchController.addListener(() {
       final query = _searchController.text.toLowerCase().trim();
       setState(() {
-        if (query.isEmpty) {
-          _filteredPreviews = List.from(_chatPreviews);
-        } else {
-          _filteredPreviews = _chatPreviews
-              .where((chat) =>
-                  (chat['specialistName'] as String?)?.toLowerCase().contains(query) ?? false)
-              .toList();
-        }
+        _filteredPreviews = query.isEmpty
+            ? List.from(_chatPreviews)
+            : _chatPreviews
+                  .where(
+                    (chat) =>
+                        (chat['specialistName'] as String?)
+                            ?.toLowerCase()
+                            .contains(query) ??
+                        false,
+                  )
+                  .toList();
       });
     });
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchAnimController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadChatPreviews() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
     final currentUserId = supabase.auth.currentUser?.id;
@@ -70,267 +92,291 @@ class _UserChatTabState extends State<UserChatTab> {
     }
 
     try {
-      // Получаем все сообщения текущего пользователя (отправленные и полученные)
-      final messagesResponse = await supabase
+      // Получаем все сообщения
+      final messages = await supabase
           .from('chat_messages')
-          .select('''
-            id, sender_id, receiver_id, message, timestamp, read
-          ''')
+          .select('id, sender_id, receiver_id, message, timestamp')
           .or('sender_id.eq.$currentUserId,receiver_id.eq.$currentUserId')
           .order('timestamp', ascending: false);
 
-      // Собираем уникальные собеседники
-      final Map<String, Map<String, dynamic>> previewsMap = {};
-
-      // 1. Собираем все возможные ID собеседников
-      final Set<String> otherIds = {};
-      for (final msg in messagesResponse) {
-        final otherId = msg['sender_id'] == currentUserId ? msg['receiver_id'] : msg['sender_id'];
-        otherIds.add(otherId as String);
+      if (messages.isEmpty) {
+        setState(() {
+          _chatPreviews = [];
+          _filteredPreviews = [];
+          _isLoading = false;
+        });
+        return;
       }
 
-      // 2. Подгружаем профили всех собеседников одним запросом
-      final profilesResponse = await supabase
+      final Set<String> otherIds = {};
+      for (var msg in messages) {
+        final other = msg['sender_id'] == currentUserId
+            ? msg['receiver_id']
+            : msg['sender_id'];
+        if (other != null && other != currentUserId) {
+          otherIds.add(other as String);
+        }
+      }
+
+      final profiles = await supabase
           .from('profiles')
-          .select('id, display_name, photo_url')
+          .select('id, display_name, photo_url, specialty')
           .inFilter('id', otherIds.toList());
 
-      final profilesMap = {for (var p in profilesResponse) p['id'] as String: p};
+      final profilesMap = {for (var p in profiles) p['id'] as String: p};
 
-      // 3. Группируем сообщения по собеседнику
-      for (final msg in messagesResponse) {
-        final isSentByMe = msg['sender_id'] == currentUserId;
-        final otherId = isSentByMe ? msg['receiver_id'] : msg['sender_id'];
-        final otherProfile = profilesMap[otherId] ?? {};
+      final Map<String, Map<String, dynamic>> previewsMap = {};
+
+      for (var msg in messages) {
+        final isMe = msg['sender_id'] == currentUserId;
+        final otherId = isMe ? msg['receiver_id'] : msg['sender_id'];
+        if (otherId == null || otherId == currentUserId) continue;
+
+        final profile = profilesMap[otherId] ?? {};
 
         if (!previewsMap.containsKey(otherId)) {
           previewsMap[otherId] = {
             'specialistId': otherId,
-            'specialistName': otherProfile['display_name'] ?? 'Мастер',
-            'specialistPhoto': otherProfile['photo_url'],
-            'lastMessage': msg['message'],
+            'specialistName': profile['display_name'] as String? ?? 'Мастер',
+            'specialistPhoto': profile['photo_url'] as String?,
+            'specialty': profile['specialty'] as String? ?? '',
+            'lastMessage': msg['message'] as String? ?? '(нет текста)',
             'timestamp': msg['timestamp'],
-            'unreadCount': isSentByMe ? 0 : (msg['read'] == false ? 1 : 0),
-            'isOnline': false, // заглушка
+            'isOnline': false,
           };
-        } else {
-          final existing = previewsMap[otherId]!;
-          final msgTime = DateTime.parse(msg['timestamp'] as String);
-          final existingTime = DateTime.parse(existing['timestamp'] as String);
+        }
 
-          if (msgTime.isAfter(existingTime)) {
-            existing['lastMessage'] = msg['message'];
-            existing['timestamp'] = msg['timestamp'];
-            if (!isSentByMe && msg['read'] == false) {
-              existing['unreadCount'] = (existing['unreadCount'] ?? 0) + 1;
-            }
-          }
+        final preview = previewsMap[otherId]!;
+        final msgTime =
+            DateTime.tryParse(msg['timestamp'] as String? ?? '') ??
+            DateTime.now();
+
+        if (msgTime.isAfter(
+          DateTime.tryParse(preview['timestamp'] as String? ?? '2000-01-01') ??
+              DateTime(2000),
+        )) {
+          preview['lastMessage'] = msg['message'] as String? ?? '';
+          preview['timestamp'] = msg['timestamp'];
         }
       }
 
-      final previewsList = previewsMap.values.toList()
-        ..sort((a, b) => DateTime.parse(b['timestamp'] as String).compareTo(DateTime.parse(a['timestamp'] as String)));
+      final list = previewsMap.values.toList()
+        ..sort((a, b) {
+          final ta =
+              DateTime.tryParse(a['timestamp'] as String? ?? '') ??
+              DateTime(2000);
+          final tb =
+              DateTime.tryParse(b['timestamp'] as String? ?? '') ??
+              DateTime(2000);
+          return tb.compareTo(ta);
+        });
 
-      setState(() {
-        _chatPreviews = previewsList;
-        _filteredPreviews = List.from(previewsList);
-        _isLoading = false;
-      });
-    } catch (e, stack) {
-      debugPrint('Ошибка чатов: $e\n$stack');
-      setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки чатов: $e')),
-        );
+        setState(() {
+          _chatPreviews = list;
+          _filteredPreviews = List.from(list);
+          _isLoading = false;
+        });
       }
+    } catch (e) {
+      debugPrint('Ошибка чатов: $e');
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   String _formatTimestamp(String? timestamp) {
     if (timestamp == null) return '';
-    final date = DateTime.parse(timestamp).toLocal();
-    final now = DateTime.now();
-    if (date.day == now.day && date.month == now.month && date.year == now.year) {
-      return DateFormat('HH:mm').format(date);
-    } else if (date.year == now.year) {
-      return DateFormat('dd MMM').format(date);
-    } else {
-      return DateFormat('dd.MM.yy').format(date);
+    try {
+      final date = DateTime.parse(timestamp).toLocal();
+      final now = DateTime.now();
+      if (date.isAfter(now.subtract(const Duration(days: 1)))) {
+        return DateFormat('HH:mm').format(date);
+      } else if (date.year == now.year) {
+        return DateFormat('d MMM').format(date);
+      } else {
+        return DateFormat('d.MM.yy').format(date);
+      }
+    } catch (_) {
+      return '';
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
       appBar: AppBar(
+        centerTitle: true,
+        backgroundColor: colorScheme.surfaceContainerLow,
+        foregroundColor: colorScheme.onSurface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Поиск по имени мастера...',
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(color: Colors.white70),
+            ? FadeTransition(
+                opacity: _searchFade,
+                child: TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  style: TextStyle(color: colorScheme.onSurface),
+                  decoration: InputDecoration(
+                    hintText: 'Поиск по имени...',
+                    hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                    border: InputBorder.none,
+                  ),
                 ),
-                style: const TextStyle(color: Colors.white),
               )
-            : const Text('Чаты'),
+            : Text('Чаты', style: TextStyle(color: colorScheme.onSurface),),
         actions: [
-          if (!_isSearching)
-            IconButton(
-              icon: const Icon(Icons.search),
-              onPressed: () {
-                setState(() {
-                  _isSearching = true;
-                  _searchController.clear();
-                });
-              },
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () {
-                setState(() {
-                  _isSearching = false;
-                  _searchController.clear();
-                  _filteredPreviews = List.from(_chatPreviews);
-                });
-              },
-            ),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 280),
+            child: _isSearching
+                ? IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() {
+                        _isSearching = false;
+                        _filteredPreviews = List.from(_chatPreviews);
+                      });
+                      _searchAnimController.reverse();
+                    },
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.search_rounded),
+                    onPressed: () {
+                      setState(() => _isSearching = true);
+                      _searchAnimController.forward();
+                    },
+                  ),
+          ),
         ],
+        // elevation: 0,
+        // scrolledUnderElevation: 2,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            height: 1,
+            color: colorScheme.outlineVariant.withOpacity(0.6),
+          ),
+        ),
       ),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: _loadChatPreviews,
+        color: colorScheme.primary,
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _filteredPreviews.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.chat_bubble_outline, size: 80, color: Colors.grey[400]),
-                        const SizedBox(height: 16),
-                        Text(
-                          _isSearching ? 'Нет совпадений' : 'Нет активных чатов',
-                          style: const TextStyle(fontSize: 18),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _isSearching
-                              ? 'Попробуйте другое имя'
-                              : 'Начните общение с мастером через его услугу',
-                          style: TextStyle(color: Colors.grey[600]),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      size: 88,
+                      color: colorScheme.onSurfaceVariant.withOpacity(0.4),
                     ),
-                  )
-                : ListView.builder(
-                    itemCount: _filteredPreviews.length,
-                    itemBuilder: (context, index) {
-                      final chat = _filteredPreviews[index];
-                      final unread = chat['unreadCount'] as int? ?? 0;
-                      final time = _formatTimestamp(chat['timestamp']);
+                    const SizedBox(height: 32),
+                    Text(
+                      _isSearching ? 'Ничего не найдено' : 'Нет активных чатов',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _isSearching
+                          ? 'Попробуйте другое имя'
+                          : 'Начните общение с мастером',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: _filteredPreviews.length,
+                itemBuilder: (context, index) {
+                  final chat = _filteredPreviews[index];
+                  final time = _formatTimestamp(chat['timestamp'] as String?);
+                  final name = chat['specialistName'] as String? ?? 'Мастер';
+                  final photo = chat['specialistPhoto'] as String?;
 
-                      return ListTile(
-                        leading: Stack(
-                          children: [
-                            CircleAvatar(
-                              radius: 28,
-                              backgroundImage: chat['specialistPhoto'] != null
-                                  ? NetworkImage(chat['specialistPhoto'])
-                                  : null,
-                              child: chat['specialistPhoto'] == null
-                                  ? Text(
-                                      (chat['specialistName'] as String?)?.substring(0, 1).toUpperCase() ?? '?',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context).primaryColor,
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                            if (chat['isOnline'] == true)
-                              Positioned(
-                                right: 0,
-                                bottom: 0,
-                                child: Container(
-                                  width: 14,
-                                  height: 14,
-                                  decoration: BoxDecoration(
-                                    color: Colors.green,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 2),
-                                  ),
+                  return Card(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 6,
+                    ),
+                    elevation: 16,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    color: colorScheme.surfaceContainerLow,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      leading: CircleAvatar(
+                        radius: 28,
+                        backgroundColor: colorScheme.primaryContainer,
+                        foregroundImage: photo != null
+                            ? NetworkImage(photo)
+                            : null,
+                        child: photo == null
+                            ? Text(
+                                name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                style: TextStyle(
+                                  color: colorScheme.onPrimaryContainer,
                                 ),
-                              ),
-                          ],
+                              )
+                            : null,
+                      ),
+                      title: Text(
+                        name,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
-                        title: Text(
-                          chat['specialistName'] ?? 'Мастер',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Text(
+                        chat['lastMessage'] as String? ?? 'Начните общение',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
                         ),
-                        subtitle: Text(
-                          chat['lastMessage'] ?? '',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Colors.grey[600]),
+                      ),
+                      trailing: Text(
+                        time,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
                         ),
-                        trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              time,
-                              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ServiceChatScreen(
+                              specialist: {
+                                'id': chat['specialistId'],
+                                'display_name': chat['specialistName'],
+                                'photo_url': chat['specialistPhoto'],
+                                'specialty': chat['specialty'],
+                              },
                             ),
-                            if (unread > 0) ...[
-                              const SizedBox(height: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).primaryColor,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  '$unread',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ServiceChatScreen(
-                                specialist: {
-                                  'id': chat['specialistId'],
-                                  'display_name': chat['specialistName'],
-                                  'photo_url': chat['specialistPhoto'],
-                                  'specialty': '', // можно подгрузить из profiles
-                                },
-                              ),
-                            ),
-                          ).then((_) => _loadChatPreviews());
-                        },
-                      );
-                    },
-                  ),
+                          ),
+                        ).then((_) => _loadChatPreviews());
+                      },
+                    ),
+                  );
+                },
+              ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 }

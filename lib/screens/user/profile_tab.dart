@@ -19,7 +19,8 @@ class UserProfileTab extends StatefulWidget {
   State<UserProfileTab> createState() => _UserProfileTabState();
 }
 
-class _UserProfileTabState extends State<UserProfileTab> with SingleTickerProviderStateMixin {
+class _UserProfileTabState extends State<UserProfileTab>
+    with SingleTickerProviderStateMixin {
   final _profileService = ProfileService();
 
   bool _isLoading = true;
@@ -78,9 +79,9 @@ class _UserProfileTabState extends State<UserProfileTab> with SingleTickerProvid
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка загрузки: $e')));
         setState(() => _isLoading = false);
       }
     }
@@ -99,15 +100,15 @@ class _UserProfileTabState extends State<UserProfileTab> with SingleTickerProvid
           _photoUrl = photoUrl;
           _isEditing = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Профиль сохранён')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Профиль сохранён')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка сохранения: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка сохранения: $e')));
       }
     }
   }
@@ -146,35 +147,59 @@ class _UserProfileTabState extends State<UserProfileTab> with SingleTickerProvid
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Информация профиля'),
+        title: Text(
+          'Информация профиля',
+          style: TextStyle(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+        ),
         centerTitle: true,
-        elevation: 2,
-        backgroundColor: colorScheme.primary,
-        scrolledUnderElevation: 2, // лёгкая тень при скролле
+        backgroundColor: colorScheme.surfaceContainerLow,
+        foregroundColor: colorScheme.onSurface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            height: 1,
+            color: colorScheme.outlineVariant.withOpacity(0.6),
+          ),
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Настройки',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              ),
+              icon: const Icon(Icons.settings_outlined),
+              style: IconButton.styleFrom(
+                backgroundColor: colorScheme.surfaceContainerHighest,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
             ),
           ),
         ],
       ),
+
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeAnimation,
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch, // ← важно для растяжки
+              crossAxisAlignment:
+                  CrossAxisAlignment.stretch, // ← важно для растяжки
               children: [
                 // Блок аватар + информация — теперь растянут на всю ширину как статистика
                 Card(
                   elevation: 16, // заметная, но не тяжёлая тень
-                  shadowColor: Colors.black.withOpacity(0.30),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                  //shadowColor: Colors.black.withOpacity(0.30),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
                   color: colorScheme.surfaceContainerLow,
                   margin: const EdgeInsets.symmetric(vertical: 8),
                   child: Padding(
@@ -202,12 +227,18 @@ class _UserProfileTabState extends State<UserProfileTab> with SingleTickerProvid
                 // Статистика — тот же стиль, elevation, радиус, цвет
                 Card(
                   elevation: 16,
-                  shadowColor: Colors.black.withOpacity(0.30),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-                  color: colorScheme.surfaceContainerLow, // одинаковый с аватаром
+                  //shadowColor: Colors.black.withOpacity(0.30),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                  color:
+                      colorScheme.surfaceContainerLow, // одинаковый с аватаром
                   margin: const EdgeInsets.symmetric(vertical: 8),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 24,
+                      horizontal: 16,
+                    ),
                     child: ProfileStatsRow(stats: _stats, role: _role),
                   ),
                 ),
@@ -260,7 +291,9 @@ class _UserProfileTabState extends State<UserProfileTab> with SingleTickerProvid
                     shadowColor: colorScheme.error.withOpacity(0.25),
                     minimumSize: const Size.fromHeight(56),
                     side: BorderSide(color: colorScheme.errorContainer),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                 ),
               ],
@@ -285,7 +318,7 @@ class _UserProfileTabState extends State<UserProfileTab> with SingleTickerProvid
       shape: WidgetStatePropertyAll(
         RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
-      elevation: const WidgetStatePropertyAll(2),           // тень под всеми кнопками
+      elevation: const WidgetStatePropertyAll(2), // тень под всеми кнопками
       shadowColor: WidgetStatePropertyAll(Colors.black.withOpacity(0.18)),
       padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 12)),
     );
