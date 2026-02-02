@@ -1,4 +1,3 @@
-// lib/screens/admin/tabs/blacklist_tab.dart
 import 'package:flutter/material.dart';
 import 'package:profi/services/supabase_service.dart';
 
@@ -37,7 +36,11 @@ class _BlacklistTabState extends State<BlacklistTab> {
       });
     } catch (e) {
       setState(() => _loading = false);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
+      }
     }
   }
 
@@ -51,7 +54,11 @@ class _BlacklistTabState extends State<BlacklistTab> {
         );
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
+      }
     }
   }
 
@@ -66,9 +73,7 @@ class _BlacklistTabState extends State<BlacklistTab> {
           child: ElevatedButton.icon(
             icon: const Icon(Icons.person_add_disabled),
             label: const Text('Добавить в чёрный список'),
-            onPressed: () {
-              // → диалог / экран поиска пользователя + выбор специалиста + причина
-            },
+            onPressed: () {},
           ),
         ),
         Expanded(

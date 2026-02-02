@@ -1,4 +1,3 @@
-// lib/screens/other/settings_screen.dart
 import 'package:flutter/material.dart';
 import 'package:profi/main.dart';
 import 'package:provider/provider.dart';
@@ -46,7 +45,6 @@ class SettingsScreen extends StatelessWidget {
     if (confirmed != true || !context.mounted) return;
 
     try {
-      // Показываем индикатор
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Удаление аккаунта...'),
@@ -54,7 +52,6 @@ class SettingsScreen extends StatelessWidget {
         ),
       );
 
-      // 1. Удаляем данные, где пользователь — заказчик
       await supabase.from('orders').delete().eq('user_id', user.id);
       await supabase.from('reviews').delete().eq('user_id', user.id);
       await supabase.from('saved_services').delete().eq('user_id', user.id);
@@ -63,14 +60,12 @@ class SettingsScreen extends StatelessWidget {
           .delete()
           .or('sender_id.eq.${user.id},receiver_id.eq.${user.id}');
 
-      // 2. Если пользователь — специалист, удаляем связанные данные
       final profile = await supabase
           .from('profiles')
           .select('role')
           .eq('id', user.id)
           .single();
       if (profile['role'] == 'specialist') {
-        // Удаляем фото услуг → услуги → документы → заказы и отзывы как specialist
         final services = await supabase
             .from('services')
             .select('id')
@@ -90,13 +85,10 @@ class SettingsScreen extends StatelessWidget {
         await supabase.from('reviews').delete().eq('specialist_id', user.id);
       }
 
-      // 3. Удаляем сам профиль
       await supabase.from('profiles').delete().eq('id', user.id);
 
-      // 4. Удаляем пользователя из auth
       await supabase.auth.admin.deleteUser(user.id);
 
-      // 5. Выход
       await supabase.auth.signOut();
 
       if (context.mounted) {
@@ -138,7 +130,6 @@ class SettingsScreen extends StatelessWidget {
       ),
       body: ListView(
         children: [
-          // Секция "Внешний вид"
           const SettingsSectionHeader(title: 'Внешний вид'),
           ListTile(
             leading: Icon(Icons.palette_outlined, color: colorScheme.primary),
@@ -168,7 +159,6 @@ class SettingsScreen extends StatelessWidget {
 
           const Divider(height: 32, indent: 16, endIndent: 16),
 
-          // Секция "Аккаунт и безопасность"
           const SettingsSectionHeader(title: 'Аккаунт и безопасность'),
           ListTile(
             leading: Icon(
@@ -185,7 +175,6 @@ class SettingsScreen extends StatelessWidget {
 
           const Divider(height: 32, indent: 16, endIndent: 16),
 
-          // Секция "Поддержка и информация"
           const SettingsSectionHeader(title: 'Поддержка и информация'),
           ListTile(
             leading: Icon(
@@ -243,7 +232,6 @@ class SettingsScreen extends StatelessWidget {
 
           const Divider(height: 32, indent: 16, endIndent: 16),
 
-          // Футер
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 32),
             child: Column(

@@ -1,4 +1,3 @@
-// lib/screens/user/profile_tab.dart
 import 'package:flutter/material.dart';
 import 'package:profi/models/profile_stats.dart';
 import 'package:profi/services/profile_service.dart';
@@ -149,7 +148,10 @@ class _UserProfileTabState extends State<UserProfileTab>
       appBar: AppBar(
         title: Text(
           'Информация профиля',
-          style: TextStyle(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: colorScheme.onSurface,
+          ),
         ),
         centerTitle: true,
         backgroundColor: colorScheme.surfaceContainerLow,
@@ -190,13 +192,10 @@ class _UserProfileTabState extends State<UserProfileTab>
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.stretch, // ← важно для растяжки
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Блок аватар + информация — теперь растянут на всю ширину как статистика
                 Card(
-                  elevation: 16, // заметная, но не тяжёлая тень
-                  //shadowColor: Colors.black.withOpacity(0.30),
+                  elevation: 16,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(28),
                   ),
@@ -224,15 +223,12 @@ class _UserProfileTabState extends State<UserProfileTab>
 
                 const SizedBox(height: 6),
 
-                // Статистика — тот же стиль, elevation, радиус, цвет
                 Card(
                   elevation: 16,
-                  //shadowColor: Colors.black.withOpacity(0.30),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(28),
                   ),
-                  color:
-                      colorScheme.surfaceContainerLow, // одинаковый с аватаром
+                  color: colorScheme.surfaceContainerLow,
                   margin: const EdgeInsets.symmetric(vertical: 8),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -245,7 +241,6 @@ class _UserProfileTabState extends State<UserProfileTab>
 
                 const SizedBox(height: 12),
 
-                // Кнопки действий — с небольшой тенью
                 _buildActionButton(
                   context,
                   icon: Icons.receipt_long_rounded,
@@ -278,7 +273,6 @@ class _UserProfileTabState extends State<UserProfileTab>
 
                 const SizedBox(height: 12),
 
-                // Выход — danger action с тенью
                 OutlinedButton.icon(
                   onPressed: _logout,
                   icon: Icon(Icons.logout_rounded, color: colorScheme.error),
@@ -287,7 +281,7 @@ class _UserProfileTabState extends State<UserProfileTab>
                     style: TextStyle(color: colorScheme.error),
                   ),
                   style: OutlinedButton.styleFrom(
-                    elevation: 1, // небольшая тень под кнопкой
+                    elevation: 1,
                     shadowColor: colorScheme.error.withOpacity(0.25),
                     minimumSize: const Size.fromHeight(56),
                     side: BorderSide(color: colorScheme.errorContainer),
@@ -318,7 +312,7 @@ class _UserProfileTabState extends State<UserProfileTab>
       shape: WidgetStatePropertyAll(
         RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
-      elevation: const WidgetStatePropertyAll(2), // тень под всеми кнопками
+      elevation: const WidgetStatePropertyAll(2),
       shadowColor: WidgetStatePropertyAll(Colors.black.withOpacity(0.18)),
       padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 12)),
     );

@@ -1,4 +1,3 @@
-// lib/widgets/services_tab/service_card.dart
 import 'package:flutter/material.dart';
 import 'package:profi/screens/other/view_for_specialist.dart';
 
@@ -18,7 +17,8 @@ class ServiceCard extends StatefulWidget {
   State<ServiceCard> createState() => _ServiceCardState();
 }
 
-class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStateMixin {
+class _ServiceCardState extends State<ServiceCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _actionController;
   late Animation<double> _scaleAnimation;
 
@@ -46,11 +46,13 @@ class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStat
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
 
-    final photos = (widget.service['photos'] as List<dynamic>?)?.cast<String>() ?? [];
+    final photos =
+        (widget.service['photos'] as List<dynamic>?)?.cast<String>() ?? [];
     final mainPhoto = photos.isNotEmpty ? photos.first : null;
 
     final name = widget.service['name'] as String? ?? 'Без названия';
-    final description = widget.service['description'] as String? ?? 'Нет описания';
+    final description =
+        widget.service['description'] as String? ?? 'Нет описания';
     final price = widget.service['price'];
     final priceText = price != null ? '${price} BYN' : 'По договорённости';
 
@@ -84,7 +86,8 @@ class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStat
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => SpecialistServiceScreen(service: widget.service),
+                builder: (_) =>
+                    SpecialistServiceScreen(service: widget.service),
               ),
             );
           },
@@ -92,7 +95,6 @@ class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStat
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Фото услуги
               Stack(
                 children: [
                   AspectRatio(
@@ -111,11 +113,17 @@ class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStat
                                     height: 44,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 3,
-                                      value: loadingProgress.expectedTotalBytes != null
-                                          ? loadingProgress.cumulativeBytesLoaded /
-                                              loadingProgress.expectedTotalBytes!
+                                      value:
+                                          loadingProgress.expectedTotalBytes !=
+                                              null
+                                          ? loadingProgress
+                                                    .cumulativeBytesLoaded /
+                                                loadingProgress
+                                                    .expectedTotalBytes!
                                           : null,
-                                      color: colorScheme.primary.withOpacity(0.7),
+                                      color: colorScheme.primary.withOpacity(
+                                        0.7,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -127,7 +135,8 @@ class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStat
                                 child: Icon(
                                   Icons.broken_image_rounded,
                                   size: 52,
-                                  color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                  color: colorScheme.onSurfaceVariant
+                                      .withOpacity(0.6),
                                 ),
                               ),
                             ),
@@ -138,13 +147,14 @@ class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStat
                               child: Icon(
                                 Icons.image_not_supported_rounded,
                                 size: 52,
-                                color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                color: colorScheme.onSurfaceVariant.withOpacity(
+                                  0.6,
+                                ),
                               ),
                             ),
                           ),
                   ),
 
-                  // Кнопки редактировать / удалить
                   Positioned(
                     top: 12,
                     right: 12,
@@ -165,11 +175,17 @@ class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStat
                               ],
                             ),
                             child: IconButton(
-                              icon: const Icon(Icons.edit_rounded, color: Colors.white, size: 22),
+                              icon: const Icon(
+                                Icons.edit_rounded,
+                                color: Colors.white,
+                                size: 22,
+                              ),
                               padding: const EdgeInsets.all(8),
                               constraints: const BoxConstraints(),
                               onPressed: () {
-                                _actionController.forward(from: 0.0).then((_) => _actionController.reverse());
+                                _actionController
+                                    .forward(from: 0.0)
+                                    .then((_) => _actionController.reverse());
                                 widget.onEdit();
                               },
                             ),
@@ -191,11 +207,17 @@ class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStat
                               ],
                             ),
                             child: IconButton(
-                              icon: const Icon(Icons.delete_rounded, color: Colors.white, size: 22),
+                              icon: const Icon(
+                                Icons.delete_rounded,
+                                color: Colors.white,
+                                size: 22,
+                              ),
                               padding: const EdgeInsets.all(8),
                               constraints: const BoxConstraints(),
                               onPressed: () {
-                                _actionController.forward(from: 0.0).then((_) => _actionController.reverse());
+                                _actionController
+                                    .forward(from: 0.0)
+                                    .then((_) => _actionController.reverse());
                                 widget.onDelete();
                               },
                             ),
@@ -207,7 +229,6 @@ class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStat
                 ],
               ),
 
-              // Информация
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
                 child: Column(

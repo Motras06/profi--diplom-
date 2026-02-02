@@ -1,9 +1,8 @@
-// lib/widgets/user/saved_tab/saved_service_card.dart
 import 'package:flutter/material.dart';
 import '../../../screens/other/service_screen.dart';
 import '../../../screens/other/specialist_profile.dart';
 
-class SavedServiceCard extends StatelessWidget {  // ← Убрали Stateful, т.к. анимация теперь в списке
+class SavedServiceCard extends StatelessWidget { 
   final Map<String, dynamic> service;
   final VoidCallback onRemove;
 
@@ -128,7 +127,7 @@ class SavedServiceCard extends StatelessWidget {  // ← Убрали Stateful, 
                         ),
                         padding: const EdgeInsets.all(10),
                         constraints: const BoxConstraints(),
-                        onPressed: onRemove,  // ← Прямой вызов, без await
+                        onPressed: onRemove,  
                         tooltip: 'Удалить из сохранённых',
                       ),
                     ),

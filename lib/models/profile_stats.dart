@@ -1,4 +1,3 @@
-// lib/models/profile_stats.dart
 class ProfileStats {
   final int ordersCount;
   final int reviewsCount;

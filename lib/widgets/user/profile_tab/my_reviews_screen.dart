@@ -1,7 +1,6 @@
-// lib/screens/other/my_reviews_screen.dart
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../screens/other/service_screen.dart'; // импорт экрана услуги
+import '../../../screens/other/service_screen.dart';
 
 class MyReviewsScreen extends StatefulWidget {
   const MyReviewsScreen({super.key});
@@ -54,9 +53,9 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка загрузки: $e')));
       }
     }
   }
@@ -87,25 +86,23 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
       setState(() {
         _myReviews.removeWhere((r) => r['id'] == reviewId);
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Отзыв удалён')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Отзыв удалён')));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка удаления: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ошибка удаления: $e')));
     }
   }
 
   void _editReview(Map<String, dynamic> review) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => EditReviewScreen(review: review),
-      ),
+      MaterialPageRoute(builder: (context) => EditReviewScreen(review: review)),
     ).then((updated) {
       if (updated == true) {
-        _loadMyReviews(); // обновляем список
+        _loadMyReviews(); 
       }
     });
   }
@@ -115,158 +112,194 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
     final currentUserId = supabase.auth.currentUser?.id;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Мои отзывы'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Мои отзывы'), centerTitle: true),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _myReviews.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.rate_review_outlined, size: 80, color: Colors.grey[400]),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Вы ещё не оставили отзывов',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Оцените выполненную услугу и поделитесь впечатлениями',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey[600], fontSize: 16),
-                      ),
-                      const SizedBox(height: 40),
-                      OutlinedButton.icon(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.arrow_back),
-                        label: const Text('Вернуться назад'),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.rate_review_outlined,
+                    size: 80,
+                    color: Colors.grey[400],
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadMyReviews,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _myReviews.length,
-                    itemBuilder: (context, index) {
-                      final review = _myReviews[index];
-                      final service = review['services'] ?? {};
-                      final specialist = review['profiles'] ?? {};
-                      final rating = review['rating'] as int? ?? 0;
-                      final comment = review['comment'] as String? ?? '';
-                      final date = (review['created_at'] as String?)?.split('T')[0] ?? '';
-                      final isMyReview = review['user_id'] == currentUserId;
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Вы ещё не оставили отзывов',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Оцените выполненную услугу и поделитесь впечатлениями',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                  ),
+                  const SizedBox(height: 40),
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Вернуться назад'),
+                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _loadMyReviews,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _myReviews.length,
+                itemBuilder: (context, index) {
+                  final review = _myReviews[index];
+                  final service = review['services'] ?? {};
+                  final specialist = review['profiles'] ?? {};
+                  final rating = review['rating'] as int? ?? 0;
+                  final comment = review['comment'] as String? ?? '';
+                  final date =
+                      (review['created_at'] as String?)?.split('T')[0] ?? '';
+                  final isMyReview = review['user_id'] == currentUserId;
 
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ServiceScreen(service: service),
-                            ),
-                          );
-                        },
-                        child: Card(
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 20,
-                                      backgroundImage: specialist['photo_url'] != null
-                                          ? NetworkImage(specialist['photo_url'])
-                                          : null,
-                                      child: specialist['photo_url'] == null
-                                          ? Text(
-                                              (specialist['display_name'] as String?)?.substring(0, 1).toUpperCase() ?? '?',
-                                              style: const TextStyle(fontSize: 16),
-                                            )
-                                          : null,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            service['name'] ?? 'Услуга',
-                                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                          ),
-                                          Text(
-                                            specialist['display_name'] ?? 'Мастер',
-                                            style: TextStyle(color: Colors.grey[700], fontSize: 14),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    if (isMyReview)
-                                      PopupMenuButton<String>(
-                                        onSelected: (value) {
-                                          if (value == 'edit') {
-                                            _editReview(review);
-                                          } else if (value == 'delete') {
-                                            _deleteReview(review['id']);
-                                          }
-                                        },
-                                        itemBuilder: (context) => [
-                                          const PopupMenuItem(value: 'edit', child: Text('Редактировать')),
-                                          const PopupMenuItem(value: 'delete', child: Text('Удалить', style: TextStyle(color: Colors.red))),
-                                        ],
-                                        icon: const Icon(Icons.more_vert),
-                                      ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  children: List.generate(
-                                    5,
-                                    (i) => Icon(
-                                      Icons.star,
-                                      size: 20,
-                                      color: i < rating ? Colors.amber : Colors.grey[300],
-                                    ),
-                                  ),
-                                ),
-                                if (comment.isNotEmpty) ...[
-                                  const SizedBox(height: 12),
-                                  Text(comment, style: const TextStyle(fontSize: 15)),
-                                ],
-                                const SizedBox(height: 12),
-                                Text(
-                                  'Оставлен: $date',
-                                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                                ),
-                                if (isMyReview)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 8),
-                                    child: Text(
-                                      'Ваш отзыв',
-                                      style: TextStyle(color: Colors.blue, fontWeight: FontWeight.w600, fontSize: 12),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ServiceScreen(service: service),
                         ),
                       );
                     },
-                  ),
-                ),
+                    child: Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 20,
+                                  backgroundImage:
+                                      specialist['photo_url'] != null
+                                      ? NetworkImage(specialist['photo_url'])
+                                      : null,
+                                  child: specialist['photo_url'] == null
+                                      ? Text(
+                                          (specialist['display_name']
+                                                      as String?)
+                                                  ?.substring(0, 1)
+                                                  .toUpperCase() ??
+                                              '?',
+                                          style: const TextStyle(fontSize: 16),
+                                        )
+                                      : null,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        service['name'] ?? 'Услуга',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        specialist['display_name'] ?? 'Мастер',
+                                        style: TextStyle(
+                                          color: Colors.grey[700],
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (isMyReview)
+                                  PopupMenuButton<String>(
+                                    onSelected: (value) {
+                                      if (value == 'edit') {
+                                        _editReview(review);
+                                      } else if (value == 'delete') {
+                                        _deleteReview(review['id']);
+                                      }
+                                    },
+                                    itemBuilder: (context) => [
+                                      const PopupMenuItem(
+                                        value: 'edit',
+                                        child: Text('Редактировать'),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: 'delete',
+                                        child: Text(
+                                          'Удалить',
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      ),
+                                    ],
+                                    icon: const Icon(Icons.more_vert),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: List.generate(
+                                5,
+                                (i) => Icon(
+                                  Icons.star,
+                                  size: 20,
+                                  color: i < rating
+                                      ? Colors.amber
+                                      : Colors.grey[300],
+                                ),
+                              ),
+                            ),
+                            if (comment.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                comment,
+                                style: const TextStyle(fontSize: 15),
+                              ),
+                            ],
+                            const SizedBox(height: 12),
+                            Text(
+                              'Оставлен: $date',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                            if (isMyReview)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  'Ваш отзыв',
+                                  style: TextStyle(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
     );
   }
 }
 
-// Отдельный экран для редактирования отзыва (можно вынести в отдельный файл позже)
 class EditReviewScreen extends StatefulWidget {
   final Map<String, dynamic> review;
 
@@ -285,41 +318,46 @@ class _EditReviewScreenState extends State<EditReviewScreen> {
   void initState() {
     super.initState();
     _rating = widget.review['rating'] as int? ?? 0;
-    _commentController = TextEditingController(text: widget.review['comment'] as String? ?? '');
+    _commentController = TextEditingController(
+      text: widget.review['comment'] as String? ?? '',
+    );
   }
 
   Future<void> _save() async {
     if (_rating == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Поставьте оценку')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Поставьте оценку')));
       return;
     }
 
     try {
-      await supabase.from('reviews').update({
-        'rating': _rating,
-        'comment': _commentController.text.trim().isNotEmpty ? _commentController.text.trim() : null,
-      }).eq('id', widget.review['id']);
+      await supabase
+          .from('reviews')
+          .update({
+            'rating': _rating,
+            'comment': _commentController.text.trim().isNotEmpty
+                ? _commentController.text.trim()
+                : null,
+          })
+          .eq('id', widget.review['id']);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Отзыв обновлён')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Отзыв обновлён')));
 
       Navigator.pop(context, true);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Редактировать отзыв'),
-      ),
+      appBar: AppBar(title: const Text('Редактировать отзыв')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

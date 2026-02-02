@@ -1,4 +1,3 @@
-// lib/screens/specialist/services_tab.dart
 import 'package:flutter/material.dart';
 import 'package:profi/widgets/specialist/services_tab/empty_services_state.dart';
 import 'package:profi/widgets/specialist/services_tab/service_card.dart';
@@ -52,7 +51,6 @@ class _ServicesTabState extends State<ServicesTab>
       });
     });
 
-    // Запуск анимации после первой загрузки
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) _fadeController.forward();
     });
@@ -88,7 +86,6 @@ class _ServicesTabState extends State<ServicesTab>
             .order('order', ascending: true)
             .limit(3);
 
-        // Безопасная обработка: фильтруем null и кастуем к List<String>
         service['photos'] = photosResponse
             .map((p) => p['photo_url'] as String?)
             .where((url) => url != null)
@@ -134,7 +131,6 @@ class _ServicesTabState extends State<ServicesTab>
     final colorScheme = theme.colorScheme;
     final screenWidth = MediaQuery.of(context).size.width;
 
-    // Адаптивный aspect ratio для карточек
     final childAspectRatio = screenWidth < 360 ? 0.72 : 0.68;
 
     return Scaffold(
@@ -143,7 +139,6 @@ class _ServicesTabState extends State<ServicesTab>
       body: SafeArea(
         child: Column(
           children: [
-            // Поиск + кнопка добавления (в стиле MainTabSearchBar)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Row(
@@ -217,7 +212,6 @@ class _ServicesTabState extends State<ServicesTab>
                             service: service,
                             onEdit: () => _showAddEditDialog(service: service),
                             onDelete: () {
-                              // Реализуй удаление здесь или передай callback
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Удаление услуги...'),

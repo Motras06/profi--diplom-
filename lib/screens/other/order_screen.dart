@@ -1,7 +1,5 @@
-// lib/screens/other/order_screen.dart
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-// предполагается, что supabase там инициализирован
 
 class OrderScreen extends StatefulWidget {
   final Map<String, dynamic> service;
@@ -57,7 +55,9 @@ class _OrderScreenState extends State<OrderScreen> {
 
     if (serviceId == null || specialistId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ошибка: недостаточно данных об услуге или мастере')),
+        const SnackBar(
+          content: Text('Ошибка: недостаточно данных об услуге или мастере'),
+        ),
       );
       setState(() => _isSubmitting = false);
       return;
@@ -82,7 +82,7 @@ class _OrderScreenState extends State<OrderScreen> {
         'user_id': userId,
         'specialist_id': specialistId,
         'service_id': serviceId,
-        'status': 'pending', // можно вынести в enum позже
+        'status': 'pending',
         'contract_details': contractDetails,
       });
 
@@ -115,10 +115,7 @@ class _OrderScreenState extends State<OrderScreen> {
     final specialistName = widget.specialist['display_name'] ?? 'Мастер';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Оформление заказа'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Оформление заказа'), centerTitle: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -126,7 +123,6 @@ class _OrderScreenState extends State<OrderScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Краткая информация о заказе
               Card(
                 elevation: 2,
                 child: Padding(
@@ -136,7 +132,10 @@ class _OrderScreenState extends State<OrderScreen> {
                     children: [
                       Text(
                         serviceName,
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Text('Мастер: $specialistName'),
@@ -161,20 +160,28 @@ class _OrderScreenState extends State<OrderScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Форма
-              const Text('Адрес выполнения', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+              const Text(
+                'Адрес выполнения',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+              ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _addressController,
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   hintText: 'Улица, дом, квартира, подъезд',
                 ),
-                validator: (v) => v?.trim().isEmpty ?? true ? 'Укажите адрес' : null,
+                validator: (v) =>
+                    v?.trim().isEmpty ?? true ? 'Укажите адрес' : null,
               ),
               const SizedBox(height: 24),
 
-              const Text('Желаемая дата и время', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+              const Text(
+                'Желаемая дата и время',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+              ),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -182,7 +189,9 @@ class _OrderScreenState extends State<OrderScreen> {
                     child: TextFormField(
                       controller: _dateController,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         hintText: 'Дата',
                         suffixIcon: const Icon(Icons.calendar_today),
                       ),
@@ -190,16 +199,22 @@ class _OrderScreenState extends State<OrderScreen> {
                       onTap: () async {
                         final date = await showDatePicker(
                           context: context,
-                          initialDate: DateTime.now().add(const Duration(days: 1)),
+                          initialDate: DateTime.now().add(
+                            const Duration(days: 1),
+                          ),
                           firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          lastDate: DateTime.now().add(
+                            const Duration(days: 365),
+                          ),
                         );
                         if (date != null && mounted) {
-                          _dateController.text = '${date.day.toString().padLeft(2, '0')}.'
+                          _dateController.text =
+                              '${date.day.toString().padLeft(2, '0')}.'
                               '${date.month.toString().padLeft(2, '0')}.${date.year}';
                         }
                       },
-                      validator: (v) => v?.isEmpty ?? true ? 'Выберите дату' : null,
+                      validator: (v) =>
+                          v?.isEmpty ?? true ? 'Выберите дату' : null,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -207,7 +222,9 @@ class _OrderScreenState extends State<OrderScreen> {
                     child: TextFormField(
                       controller: _timeController,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         hintText: 'Время',
                         suffixIcon: const Icon(Icons.access_time),
                       ),
@@ -221,14 +238,18 @@ class _OrderScreenState extends State<OrderScreen> {
                           _timeController.text = time.format(context);
                         }
                       },
-                      validator: (v) => v?.isEmpty ?? true ? 'Выберите время' : null,
+                      validator: (v) =>
+                          v?.isEmpty ?? true ? 'Выберите время' : null,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
 
-              const Text('Примерная продолжительность', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+              const Text(
+                'Примерная продолжительность',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+              ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _selectedDuration,
@@ -237,24 +258,30 @@ class _OrderScreenState extends State<OrderScreen> {
                     .toList(),
                 onChanged: (v) => setState(() => _selectedDuration = v),
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
 
-              const Text('Дополнительный комментарий', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+              const Text(
+                'Дополнительный комментарий',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+              ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _commentController,
                 maxLines: 4,
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   hintText: 'Подробности, особые пожелания, материалы и т.д.',
                 ),
               ),
               const SizedBox(height: 40),
 
-              // Кнопка подтверждения
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -264,7 +291,10 @@ class _OrderScreenState extends State<OrderScreen> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Icon(Icons.check_circle),
                   label: Text(
@@ -272,7 +302,9 @@ class _OrderScreenState extends State<OrderScreen> {
                     style: const TextStyle(fontSize: 16),
                   ),
                   style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     elevation: 4,
                   ),
                 ),

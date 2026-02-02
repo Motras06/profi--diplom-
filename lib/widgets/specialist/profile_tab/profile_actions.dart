@@ -1,4 +1,3 @@
-// lib/widgets/specialist/profile_tab/profile_actions.dart
 import 'package:flutter/material.dart';
 
 class ProfileActions extends StatelessWidget {
@@ -19,7 +18,9 @@ class ProfileActions extends StatelessWidget {
           onPressed: onEdit,
           icon: const Icon(Icons.edit),
           label: const Text('Редактировать профиль'),
-          style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size.fromHeight(52),
+          ),
         ),
         const SizedBox(height: 16),
         OutlinedButton.icon(
@@ -37,7 +38,10 @@ class ProfileActions extends StatelessWidget {
         OutlinedButton.icon(
           onPressed: onLogout,
           icon: const Icon(Icons.logout, color: Colors.red),
-          label: const Text('Выйти из аккаунта', style: TextStyle(color: Colors.red)),
+          label: const Text(
+            'Выйти из аккаунта',
+            style: TextStyle(color: Colors.red),
+          ),
           style: OutlinedButton.styleFrom(
             side: const BorderSide(color: Colors.red),
             minimumSize: const Size.fromHeight(50),

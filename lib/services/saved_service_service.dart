@@ -1,4 +1,3 @@
-// lib/services/saved_service_service.dart
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -38,14 +37,13 @@ class SavedServiceService extends ChangeNotifier {
 
   final Set<String> _selectedSpecialties = {};
 
-  // Геттеры (все публичные для доступа из bottom sheet)
   List<Map<String, dynamic>> get filteredServices => _filteredServices;
   bool get isLoading => _isLoading;
   String get sortBy => _sortBy;
   double? get minPrice => _minPrice;
   double? get maxPrice => _maxPrice;
   List<String> get availableSpecialties => _availableSpecialties;
-  Set<String> get selectedSpecialties => _selectedSpecialties;  // ← Добавлен этот геттер!
+  Set<String> get selectedSpecialties => _selectedSpecialties;
 
   SavedServiceService() {
     searchController.addListener(_applyFilters);
@@ -90,7 +88,9 @@ class SavedServiceService extends ChangeNotifier {
             .order('order', ascending: true)
             .limit(1);
 
-        service['main_photo'] = photos.isNotEmpty ? photos.first['photo_url'] : null;
+        service['main_photo'] = photos.isNotEmpty
+            ? photos.first['photo_url']
+            : null;
 
         services.add(service);
       }
@@ -113,19 +113,25 @@ class SavedServiceService extends ChangeNotifier {
     List<Map<String, dynamic>> result = _savedServices.where((service) {
       final name = (service['name'] as String?)?.toLowerCase() ?? '';
       final desc = (service['description'] as String?)?.toLowerCase() ?? '';
-      final master = (service['profiles']?['display_name'] as String?)?.toLowerCase() ?? '';
-      final specialty = (service['profiles']?['specialty'] as String?)?.toLowerCase() ?? '';
+      final master =
+          (service['profiles']?['display_name'] as String?)?.toLowerCase() ??
+          '';
+      final specialty =
+          (service['profiles']?['specialty'] as String?)?.toLowerCase() ?? '';
 
-      final matchesSearch = name.contains(query) ||
+      final matchesSearch =
+          name.contains(query) ||
           desc.contains(query) ||
           master.contains(query) ||
           specialty.contains(query);
 
-      final matchesSpecialty = _selectedSpecialties.isEmpty ||
+      final matchesSpecialty =
+          _selectedSpecialties.isEmpty ||
           _selectedSpecialties.contains(service['profiles']?['specialty']);
 
       final price = service['price'] as num?;
-      final matchesPrice = (price == null) ||
+      final matchesPrice =
+          (price == null) ||
           (_minPrice == null || price >= _minPrice!) &&
               (_maxPrice == null || price <= _maxPrice!);
 
@@ -134,18 +140,31 @@ class SavedServiceService extends ChangeNotifier {
 
     switch (_sortBy) {
       case 'price_asc':
-        result.sort((a, b) => (a['price'] as num? ?? 0).compareTo(b['price'] as num? ?? 0));
+        result.sort(
+          (a, b) =>
+              (a['price'] as num? ?? 0).compareTo(b['price'] as num? ?? 0),
+        );
         break;
       case 'price_desc':
-        result.sort((a, b) => (b['price'] as num? ?? 0).compareTo(a['price'] as num? ?? 0));
+        result.sort(
+          (a, b) =>
+              (b['price'] as num? ?? 0).compareTo(a['price'] as num? ?? 0),
+        );
         break;
       case 'name_asc':
-        result.sort((a, b) => (a['name'] as String? ?? '').compareTo(b['name'] as String? ?? ''));
+        result.sort(
+          (a, b) => (a['name'] as String? ?? '').compareTo(
+            b['name'] as String? ?? '',
+          ),
+        );
         break;
       case 'saved_desc':
       default:
-        result.sort((a, b) => DateTime.parse(b['saved_at'] as String)
-            .compareTo(DateTime.parse(a['saved_at'] as String)));
+        result.sort(
+          (a, b) => DateTime.parse(
+            b['saved_at'] as String,
+          ).compareTo(DateTime.parse(a['saved_at'] as String)),
+        );
     }
 
     _filteredServices = result;
@@ -166,9 +185,7 @@ class SavedServiceService extends ChangeNotifier {
       _savedServices.removeWhere((s) => s['id'] == serviceId);
       _filteredServices.removeWhere((s) => s['id'] == serviceId);
       notifyListeners();
-    } catch (e) {
-      // ошибка показывается в UI
-    }
+    } catch (e) {}
   }
 
   void updateSort(String sort) {

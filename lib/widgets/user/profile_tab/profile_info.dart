@@ -1,4 +1,3 @@
-// lib/widgets/user/profile_tab/profile_info.dart
 import 'package:flutter/material.dart';
 
 class ProfileInfo extends StatelessWidget {
@@ -25,9 +24,9 @@ class ProfileInfo extends StatelessWidget {
         const SizedBox(height: 20),
         Text(
           displayName ?? 'Имя не указано',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
           textAlign: TextAlign.center,
         ),
         if (role != null) ...[
@@ -36,16 +35,18 @@ class ProfileInfo extends StatelessWidget {
             label: Text(
               role == 'specialist' ? (specialty ?? 'Специалист') : 'Клиент',
             ),
-            backgroundColor: role == 'specialist' ? Colors.blue.shade100 : colorScheme.primary,
+            backgroundColor: role == 'specialist'
+                ? Colors.blue.shade100
+                : colorScheme.primary,
             padding: const EdgeInsets.symmetric(horizontal: 16),
           ),
         ],
         const SizedBox(height: 8),
         Text(
           email ?? '—',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colorScheme.primary,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: colorScheme.primary),
         ),
       ],
     );

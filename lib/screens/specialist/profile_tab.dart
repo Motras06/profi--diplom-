@@ -1,8 +1,6 @@
-// lib/widgets/specialist/profile_tab/profile_tab.dart
 import 'package:flutter/material.dart';
 import 'package:profi/screens/auth/auth_screen.dart';
 import 'package:profi/widgets/specialist/profile_tab/edit_profile_form.dart';
-import 'package:profi/widgets/specialist/profile_tab/profile_view.dart';
 import 'package:profi/screens/other/settings_screen.dart';
 import '../../../services/supabase_service.dart';
 
@@ -15,7 +13,8 @@ class ProfileTab extends StatefulWidget {
   State<ProfileTab> createState() => _ProfileTabState();
 }
 
-class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateMixin {
+class _ProfileTabState extends State<ProfileTab>
+    with SingleTickerProviderStateMixin {
   bool _isLoading = true;
   bool _isEditing = false;
 
@@ -37,11 +36,14 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
       duration: const Duration(milliseconds: 480),
     );
 
-    _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic);
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.25),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic));
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOutCubic,
+    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.25), end: Offset.zero).animate(
+          CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic),
+        );
 
     _loadProfile();
 
@@ -81,27 +83,35 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
     } catch (e) {
       debugPrint('Ошибка загрузки профиля: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки профиля: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка загрузки профиля: $e')));
         setState(() => _isLoading = false);
       }
     }
   }
 
-  Future<void> _saveProfile(String name, String? about, String? specialty, String? photoUrl) async {
+  Future<void> _saveProfile(
+    String name,
+    String? about,
+    String? specialty,
+    String? photoUrl,
+  ) async {
     setState(() => _isLoading = true);
 
     try {
       final userId = supabase.auth.currentUser?.id;
       if (userId == null) return;
 
-      await supabase.from('profiles').update({
-        'display_name': name.trim(),
-        'about': about?.trim(),
-        'specialty': specialty?.trim(),
-        'photo_url': photoUrl,
-      }).eq('id', userId);
+      await supabase
+          .from('profiles')
+          .update({
+            'display_name': name.trim(),
+            'about': about?.trim(),
+            'specialty': specialty?.trim(),
+            'photo_url': photoUrl,
+          })
+          .eq('id', userId);
 
       if (mounted) {
         setState(() {
@@ -113,15 +123,15 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
           _isLoading = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Профиль сохранён!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Профиль сохранён!')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка сохранения: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка сохранения: $e')));
         setState(() => _isLoading = false);
       }
     }
@@ -214,7 +224,6 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Главная карточка с аватаром и информацией
                   Card(
                     elevation: 16,
                     shadowColor: colorScheme.shadow,
@@ -227,11 +236,12 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                       padding: const EdgeInsets.all(24),
                       child: Column(
                         children: [
-                          // Аватар
                           CircleAvatar(
                             radius: 64,
                             backgroundColor: colorScheme.primaryContainer,
-                            foregroundImage: _photoUrl != null ? NetworkImage(_photoUrl!) : null,
+                            foregroundImage: _photoUrl != null
+                                ? NetworkImage(_photoUrl!)
+                                : null,
                             child: _photoUrl == null
                                 ? Text(
                                     _displayName?.isNotEmpty == true
@@ -247,7 +257,6 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                           ),
                           const SizedBox(height: 24),
 
-                          // Имя и специальность
                           Text(
                             _displayName ?? 'Мастер',
                             style: theme.textTheme.headlineMedium?.copyWith(
@@ -266,16 +275,23 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
 
                           const SizedBox(height: 16),
 
-                          // Кнопка редактирования
                           OutlinedButton.icon(
                             onPressed: _startEditing,
                             icon: const Icon(Icons.edit_rounded, size: 20),
                             label: const Text('Редактировать профиль'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: colorScheme.primary,
-                              side: BorderSide(color: colorScheme.primary, width: 1.5),
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              side: BorderSide(
+                                color: colorScheme.primary,
+                                width: 1.5,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
                               minimumSize: const Size.fromHeight(56),
                             ),
                           ),
@@ -286,12 +302,13 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
 
                   const SizedBox(height: 12),
 
-                  // О себе
                   if (_about != null && _about!.isNotEmpty)
                     Card(
                       elevation: 16,
                       shadowColor: colorScheme.shadow,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
+                      ),
                       color: colorScheme.surfaceContainerLow,
                       margin: const EdgeInsets.symmetric(vertical: 8),
                       child: Padding(
@@ -301,7 +318,9 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                           children: [
                             Text(
                               'О себе',
-                              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             const SizedBox(height: 12),
                             Text(
@@ -318,7 +337,6 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
 
                   const SizedBox(height: 24),
 
-                  // Кнопка выхода — danger action
                   OutlinedButton.icon(
                     onPressed: _logout,
                     icon: Icon(Icons.logout_rounded, color: colorScheme.error),
@@ -330,7 +348,9 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                       elevation: 2,
                       shadowColor: colorScheme.error.withOpacity(0.25),
                       side: BorderSide(color: colorScheme.errorContainer),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       minimumSize: const Size.fromHeight(56),
                     ),
                   ),

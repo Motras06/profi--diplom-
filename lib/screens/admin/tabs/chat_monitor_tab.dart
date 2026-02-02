@@ -38,7 +38,11 @@ class _ChatMonitorTabState extends State<ChatMonitorTab> {
       });
     } catch (e) {
       setState(() => _loading = false);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
+      }
     }
   }
 
@@ -46,7 +50,8 @@ class _ChatMonitorTabState extends State<ChatMonitorTab> {
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
 
-    if (_messages.isEmpty) return const Center(child: Text('Сообщений не найдено'));
+    if (_messages.isEmpty)
+      return const Center(child: Text('Сообщений не найдено'));
 
     return RefreshIndicator(
       onRefresh: _loadRecentMessages,
@@ -54,18 +59,24 @@ class _ChatMonitorTabState extends State<ChatMonitorTab> {
         itemCount: _messages.length,
         itemBuilder: (context, i) {
           final msg = _messages[i];
-          final from = msg['sender_name'] ?? msg['sender_id'].toString().substring(0, 8);
-          final to = msg['receiver_name'] ?? msg['receiver_id'].toString().substring(0, 8);
+          final from =
+              msg['sender_name'] ?? msg['sender_id'].toString().substring(0, 8);
+          final to =
+              msg['receiver_name'] ??
+              msg['receiver_id'].toString().substring(0, 8);
 
           return ListTile(
             leading: const Icon(Icons.chat_bubble_outline),
-            title: Text(msg['message'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis),
-            subtitle: Text('$from → $to • ${msg['timestamp']?.substring(0, 16) ?? ''}'),
+            title: Text(
+              msg['message'] ?? '',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Text(
+              '$from → $to • ${msg['timestamp']?.substring(0, 16) ?? ''}',
+            ),
             dense: true,
-            onTap: () {
-              // → открыть полный чат между sender_id и receiver_id
-              // можно передать пару id в новый экран
-            },
+            onTap: () {},
           );
         },
       ),

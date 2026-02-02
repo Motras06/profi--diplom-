@@ -1,4 +1,3 @@
-// lib/screens/admin/admin_home.dart
 import 'package:flutter/material.dart';
 import 'package:profi/services/supabase_service.dart';
 import 'package:profi/screens/admin/tabs/users_tab.dart';
@@ -13,10 +12,7 @@ import 'package:profi/screens/auth/auth_screen.dart';
 class AdminHome extends StatefulWidget {
   final String displayName;
 
-  const AdminHome({
-    super.key,
-    required this.displayName,
-  });
+  const AdminHome({super.key, required this.displayName});
 
   @override
   State<AdminHome> createState() => _AdminHomeState();
@@ -28,9 +24,9 @@ class _AdminHomeState extends State<AdminHome> {
   Future<void> _logout(BuildContext context) async {
     await supabase.auth.signOut();
     if (context.mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const AuthScreen()),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const AuthScreen()));
     }
   }
 
@@ -42,13 +38,13 @@ class _AdminHomeState extends State<AdminHome> {
     super.initState();
 
     _adminTabs = [
-      const UsersTab(),           // Пользователи (обычные + специалисты)
-      const SpecialistsTab(),     // Специалисты + их профили
-      const ServicesTab(),        // Услуги / прайс-лист
-      const OrdersTab(),          // Заказы / сделки
-      const ReviewsTab(),         // Отзывы и рейтинги
-      const BlacklistTab(),       // Чёрный список
-      const ChatMonitorTab(),     // Модерация чатов (опционально)
+      const UsersTab(),
+      const SpecialistsTab(),
+      const ServicesTab(),
+      const OrdersTab(),
+      const ReviewsTab(),
+      const BlacklistTab(),
+      const ChatMonitorTab(),
     ];
 
     _navItems = const [
@@ -83,10 +79,7 @@ class _AdminHomeState extends State<AdminHome> {
         ],
       ),
 
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _adminTabs,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _adminTabs),
 
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,

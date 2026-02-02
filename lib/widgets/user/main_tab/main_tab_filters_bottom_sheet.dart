@@ -1,4 +1,3 @@
-// lib/widgets/user/main_tab/main_tab_filters_bottom_sheet.dart
 import 'package:flutter/material.dart';
 import '../../../services/service_service.dart';
 
@@ -13,10 +12,12 @@ class MainTabFiltersBottomSheet extends StatefulWidget {
   });
 
   @override
-  State<MainTabFiltersBottomSheet> createState() => _MainTabFiltersBottomSheetState();
+  State<MainTabFiltersBottomSheet> createState() =>
+      _MainTabFiltersBottomSheetState();
 }
 
-class _MainTabFiltersBottomSheetState extends State<MainTabFiltersBottomSheet> with SingleTickerProviderStateMixin {
+class _MainTabFiltersBottomSheetState extends State<MainTabFiltersBottomSheet>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -40,18 +41,16 @@ class _MainTabFiltersBottomSheetState extends State<MainTabFiltersBottomSheet> w
       duration: const Duration(milliseconds: 600),
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0.0, 0.30),
       end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
-    // Запуск анимации сразу
     _controller.forward();
   }
 
@@ -77,7 +76,7 @@ class _MainTabFiltersBottomSheetState extends State<MainTabFiltersBottomSheet> w
           height: MediaQuery.of(context).size.height * 0.85,
           decoration: BoxDecoration(
             color: colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)), // M3-стандарт
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             boxShadow: [
               BoxShadow(
                 color: colorScheme.shadow.withOpacity(0.15),
@@ -88,7 +87,6 @@ class _MainTabFiltersBottomSheetState extends State<MainTabFiltersBottomSheet> w
           ),
           child: Column(
             children: [
-              // Drag handle — M3 стиль
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Container(
@@ -101,7 +99,6 @@ class _MainTabFiltersBottomSheetState extends State<MainTabFiltersBottomSheet> w
                 ),
               ),
 
-              // Заголовок — titleLarge
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
                 child: Text(
@@ -119,7 +116,6 @@ class _MainTabFiltersBottomSheetState extends State<MainTabFiltersBottomSheet> w
                 child: ListView(
                   padding: const EdgeInsets.all(24),
                   children: [
-                    // Сортировка — headlineSmall + chips
                     Text(
                       'Сортировка',
                       style: textTheme.headlineSmall?.copyWith(
@@ -141,7 +137,6 @@ class _MainTabFiltersBottomSheetState extends State<MainTabFiltersBottomSheet> w
 
                     const SizedBox(height: 32),
 
-                    // Диапазон цены
                     Text(
                       'Диапазон цены (BYN)',
                       style: textTheme.headlineSmall?.copyWith(
@@ -188,7 +183,6 @@ class _MainTabFiltersBottomSheetState extends State<MainTabFiltersBottomSheet> w
 
                     const SizedBox(height: 32),
 
-                    // Специальность — chips
                     Text(
                       'Специальность',
                       style: textTheme.headlineSmall?.copyWith(
@@ -200,8 +194,13 @@ class _MainTabFiltersBottomSheetState extends State<MainTabFiltersBottomSheet> w
                     Wrap(
                       spacing: 10,
                       runSpacing: 10,
-                      children: widget.serviceService.availableSpecialties.map((spec) {
-                        final selected = widget.serviceService.selectedSpecialties.contains(spec);
+                      children: widget.serviceService.availableSpecialties.map((
+                        spec,
+                      ) {
+                        final selected = widget
+                            .serviceService
+                            .selectedSpecialties
+                            .contains(spec);
                         return FilterChip(
                           label: Text(spec),
                           selected: selected,
@@ -214,16 +213,19 @@ class _MainTabFiltersBottomSheetState extends State<MainTabFiltersBottomSheet> w
                           checkmarkColor: colorScheme.onPrimaryContainer,
                           backgroundColor: colorScheme.surfaceContainerHighest,
                           labelStyle: TextStyle(
-                            color: selected ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
+                            color: selected
+                                ? colorScheme.onPrimaryContainer
+                                : colorScheme.onSurface,
                           ),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         );
                       }).toList(),
                     ),
 
                     const SizedBox(height: 48),
 
-                    // Кнопки действий
                     Row(
                       children: [
                         Expanded(
@@ -237,12 +239,16 @@ class _MainTabFiltersBottomSheetState extends State<MainTabFiltersBottomSheet> w
                             },
                             style: OutlinedButton.styleFrom(
                               side: BorderSide(color: colorScheme.outline),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                             child: Text(
                               'Сбросить',
-                              style: textTheme.labelLarge?.copyWith(color: colorScheme.primary),
+                              style: textTheme.labelLarge?.copyWith(
+                                color: colorScheme.primary,
+                              ),
                             ),
                           ),
                         ),
@@ -261,12 +267,16 @@ class _MainTabFiltersBottomSheetState extends State<MainTabFiltersBottomSheet> w
                               backgroundColor: colorScheme.primary,
                               foregroundColor: colorScheme.onPrimary,
                               minimumSize: const Size(double.infinity, 56),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                               elevation: 0,
                             ),
                             child: Text(
                               'Применить',
-                              style: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+                              style: textTheme.labelLarge?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
@@ -299,7 +309,9 @@ class _MainTabFiltersBottomSheetState extends State<MainTabFiltersBottomSheet> w
       selectedColor: colorScheme.primaryContainer,
       backgroundColor: colorScheme.surfaceContainerHighest,
       labelStyle: TextStyle(
-        color: selected ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
+        color: selected
+            ? colorScheme.onPrimaryContainer
+            : colorScheme.onSurface,
         fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

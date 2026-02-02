@@ -1,4 +1,3 @@
-// lib/screens/user/main_tab.dart
 import 'package:flutter/material.dart';
 import '../../services/service_service.dart';
 import '../../widgets/user/main_tab/main_tab_search_bar.dart';
@@ -37,9 +36,9 @@ class _MainTabState extends State<MainTab> {
         onApply: () {
           if (mounted) {
             setState(() {});
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Фильтры применены')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Фильтры применены')));
           }
         },
       ),
@@ -56,15 +55,12 @@ class _MainTabState extends State<MainTab> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    
-    // Адаптивный childAspectRatio:
-    // - на узких экранах (телефоны < 360 dp) — 0.72 (выше)
-    // - на средних и больших — 0.68–0.70
+
     final childAspectRatio = screenWidth < 360 ? 0.72 : 0.68;
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
-      
+
       body: SafeArea(
         top: true,
         bottom: false,
@@ -79,35 +75,38 @@ class _MainTabState extends State<MainTab> {
               child: _serviceService.isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _serviceService.filteredServices.isEmpty
-                      ? const MainTabEmptyState()
-                      : GridView.builder(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: screenWidth < 360 ? 8 : 12,
-                            vertical: 12,
-                          ),
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: childAspectRatio,
-                            crossAxisSpacing: screenWidth < 360 ? 10 : 14,
-                            mainAxisSpacing: screenWidth < 360 ? 12 : 16,
-                          ),
-                          itemCount: _serviceService.filteredServices.length,
-                          itemBuilder: (context, index) {
-                            final service = _serviceService.filteredServices[index];
-                            final serviceId = service['id']?.toString();
+                  ? const MainTabEmptyState()
+                  : GridView.builder(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: screenWidth < 360 ? 8 : 12,
+                        vertical: 12,
+                      ),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: childAspectRatio,
+                        crossAxisSpacing: screenWidth < 360 ? 10 : 14,
+                        mainAxisSpacing: screenWidth < 360 ? 12 : 16,
+                      ),
+                      itemCount: _serviceService.filteredServices.length,
+                      itemBuilder: (context, index) {
+                        final service = _serviceService.filteredServices[index];
+                        final serviceId = service['id']?.toString();
 
-                            if (serviceId == null) {
-                              debugPrint('У услуги нет id: $service');
-                              return const SizedBox.shrink();
-                            }
+                        if (serviceId == null) {
+                          debugPrint('У услуги нет id: $service');
+                          return const SizedBox.shrink();
+                        }
 
-                            return ServiceCard(
-                              service: service,
-                              isSaved: _serviceService.isServiceSaved(service['id']),
-                              onToggleSave: () => _serviceService.toggleSaveService(service['id']),
-                            );
-                          },
-                        ),
+                        return ServiceCard(
+                          service: service,
+                          isSaved: _serviceService.isServiceSaved(
+                            service['id'],
+                          ),
+                          onToggleSave: () =>
+                              _serviceService.toggleSaveService(service['id']),
+                        );
+                      },
+                    ),
             ),
           ],
         ),

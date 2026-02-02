@@ -1,4 +1,3 @@
-// lib/widgets/user/saved_tab/saved_tab_empty_state.dart
 import 'package:flutter/material.dart';
 
 class SavedTabEmptyState extends StatefulWidget {
@@ -23,18 +22,16 @@ class _SavedTabEmptyStateState extends State<SavedTabEmptyState>
       duration: const Duration(milliseconds: 1000),
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0.0, 0.30),
       end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
-    // Запуск анимации с небольшой задержкой
     Future.delayed(const Duration(milliseconds: 200), () {
       if (mounted) _controller.forward();
     });
@@ -62,12 +59,15 @@ class _SavedTabEmptyStateState extends State<SavedTabEmptyState>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Иконка с масштабированием (похоже на bookmark)
                 ScaleTransition(
                   scale: Tween<double>(begin: 0.65, end: 1.0).animate(
                     CurvedAnimation(
                       parent: _controller,
-                      curve: const Interval(0.0, 0.65, curve: Curves.easeOutBack),
+                      curve: const Interval(
+                        0.0,
+                        0.65,
+                        curve: Curves.easeOutBack,
+                      ),
                     ),
                   ),
                   child: Icon(
@@ -79,7 +79,6 @@ class _SavedTabEmptyStateState extends State<SavedTabEmptyState>
 
                 const SizedBox(height: 40),
 
-                // Заголовок
                 Text(
                   'Нет сохранённых услуг',
                   style: textTheme.headlineMedium?.copyWith(
@@ -92,7 +91,6 @@ class _SavedTabEmptyStateState extends State<SavedTabEmptyState>
 
                 const SizedBox(height: 16),
 
-                // Подзаголовок
                 Text(
                   'Сохраняйте понравившиеся услуги, нажимая на иконку закладки — они появятся здесь',
                   style: textTheme.bodyLarge?.copyWith(
@@ -104,11 +102,8 @@ class _SavedTabEmptyStateState extends State<SavedTabEmptyState>
 
                 const SizedBox(height: 48),
 
-                // Кнопка действия — переход к поиску / главной вкладке
                 FilledButton.icon(
                   onPressed: () {
-                    // Можно реализовать переход на главную вкладку или экран поиска
-                    // Например: context.go('/main') или DefaultTabController.of(context).animateTo(0);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: const Text('Переходим к поиску услуг'),

@@ -1,8 +1,6 @@
-// lib/widgets/specialist/profile_tab/profile_view.dart
 import 'package:flutter/material.dart';
-
-import 'documents.dart'; // Новый экран
-import 'reviews.dart';   // Новый экран
+import 'documents.dart';
+import 'reviews.dart';
 
 class ProfileView extends StatelessWidget {
   final String? displayName;
@@ -42,8 +40,14 @@ class ProfileView extends StatelessWidget {
                 : null,
           ),
           const SizedBox(height: 16),
-          Text(displayName ?? 'Специалист', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-          const Text('Специалист', style: TextStyle(fontSize: 18, color: Colors.grey)),
+          Text(
+            displayName ?? 'Специалист',
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          ),
+          const Text(
+            'Специалист',
+            style: TextStyle(fontSize: 18, color: Colors.grey),
+          ),
           const SizedBox(height: 8),
           Text(
             specialty ?? 'Специальность не указана',
@@ -57,13 +61,21 @@ class ProfileView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('О себе', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                  const Text(
+                    'О себе',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     about?.isNotEmpty == true
                         ? about!
                         : 'Расскажите о своём опыте, преимуществах и подходе к работе',
-                    style: TextStyle(fontSize: 16, color: about?.isNotEmpty == true ? null : Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: about?.isNotEmpty == true
+                          ? null
+                          : Colors.grey[600],
+                    ),
                   ),
                 ],
               ),
@@ -74,7 +86,9 @@ class ProfileView extends StatelessWidget {
             onPressed: onEdit,
             icon: const Icon(Icons.edit),
             label: const Text('Редактировать профиль'),
-            style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+            ),
           ),
           const SizedBox(height: 16),
           OutlinedButton.icon(
@@ -100,7 +114,10 @@ class ProfileView extends StatelessWidget {
           OutlinedButton.icon(
             onPressed: onLogout,
             icon: const Icon(Icons.logout, color: Colors.red),
-            label: const Text('Выйти из аккаунта', style: TextStyle(color: Colors.red)),
+            label: const Text(
+              'Выйти из аккаунта',
+              style: TextStyle(color: Colors.red),
+            ),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Colors.red),
               minimumSize: const Size.fromHeight(50),

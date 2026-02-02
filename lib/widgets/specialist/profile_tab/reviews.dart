@@ -1,4 +1,3 @@
-// lib/widgets/specialist/profile_tab/reviews.dart
 import 'package:flutter/material.dart';
 import '../../../services/supabase_service.dart';
 
@@ -30,7 +29,6 @@ class _SpecialistReviewsState extends State<SpecialistReviews> {
         throw Exception('Пользователь не авторизован');
       }
 
-      // 1. Загружаем все отзывы (для начала без лимита — если их много, потом добавим пагинацию)
       final response = await supabase
           .from('reviews')
           .select('''
@@ -44,7 +42,6 @@ class _SpecialistReviewsState extends State<SpecialistReviews> {
           .eq('specialist_id', currentUser.id)
           .order('created_at', ascending: false);
 
-      // 2. Считаем статистику на клиенте
       final total = response.length;
       final sumRating = response.fold<double>(
         0.0,
@@ -62,8 +59,10 @@ class _SpecialistReviewsState extends State<SpecialistReviews> {
         String errorMsg = 'Не удалось загрузить отзывы';
         if (e.toString().contains('relation "reviews" does not exist')) {
           errorMsg = 'Таблица reviews не найдена в базе данных';
-        } else if (e.toString().contains('JWT expired') || e.toString().contains('auth')) {
-          errorMsg = 'Проблема с авторизацией — попробуйте выйти и войти заново';
+        } else if (e.toString().contains('JWT expired') ||
+            e.toString().contains('auth')) {
+          errorMsg =
+              'Проблема с авторизацией — попробуйте выйти и войти заново';
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -93,7 +92,20 @@ class _SpecialistReviewsState extends State<SpecialistReviews> {
       return '${diff.inDays} ${diff.inDays == 1 ? "день" : "дня"} назад';
     }
 
-    final months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+    final months = [
+      'янв',
+      'фев',
+      'мар',
+      'апр',
+      'май',
+      'июн',
+      'июл',
+      'авг',
+      'сен',
+      'окт',
+      'ноя',
+      'дек',
+    ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 
@@ -102,8 +114,10 @@ class _SpecialistReviewsState extends State<SpecialistReviews> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(5, (i) {
-        if (i < floor) return const Icon(Icons.star, color: Colors.amber, size: 20);
-        if (i < rating) return const Icon(Icons.star_half, color: Colors.amber, size: 20);
+        if (i < floor)
+          return const Icon(Icons.star, color: Colors.amber, size: 20);
+        if (i < rating)
+          return const Icon(Icons.star_half, color: Colors.amber, size: 20);
         return const Icon(Icons.star_border, color: Colors.grey, size: 20);
       }),
     );
@@ -115,13 +129,9 @@ class _SpecialistReviewsState extends State<SpecialistReviews> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Отзывы'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Отзывы'), centerTitle: true),
       body: Column(
         children: [
-          // Средняя оценка
           Container(
             padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
             color: colorScheme.primary.withOpacity(0.04),
@@ -131,7 +141,10 @@ class _SpecialistReviewsState extends State<SpecialistReviews> {
               children: [
                 Text(
                   _averageRating.toStringAsFixed(1),
-                  style: const TextStyle(fontSize: 52, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 52,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(width: 20),
                 Column(
@@ -155,71 +168,112 @@ class _SpecialistReviewsState extends State<SpecialistReviews> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _reviews.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.rate_review_outlined, size: 88, color: Colors.grey[350]),
-                            const SizedBox(height: 24),
-                            const Text('Пока нет отзывов', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
-                            const SizedBox(height: 12),
-                            Text('Отзывы появятся после завершения заказов', style: TextStyle(color: Colors.grey[600], fontSize: 16)),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.rate_review_outlined,
+                          size: 88,
+                          color: Colors.grey[350],
                         ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _loadReviews,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                          itemCount: _reviews.length,
-                          itemBuilder: (context, index) {
-                            final review = _reviews[index];
-                            final clientName = review['user']?['display_name'] as String? ?? 'Клиент';
-                            final serviceName = review['service']?['name'] as String? ?? 'Услуга не указана';
-                            final rating = review['rating'] as int? ?? 0;
-                            final comment = review['comment'] as String? ?? '';
-                            final createdAt = DateTime.tryParse(review['created_at'] as String? ?? '') ?? DateTime.now();
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Пока нет отзывов',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Отзывы появятся после завершения заказов',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: _loadReviews,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                      itemCount: _reviews.length,
+                      itemBuilder: (context, index) {
+                        final review = _reviews[index];
+                        final clientName =
+                            review['user']?['display_name'] as String? ??
+                            'Клиент';
+                        final serviceName =
+                            review['service']?['name'] as String? ??
+                            'Услуга не указана';
+                        final rating = review['rating'] as int? ?? 0;
+                        final comment = review['comment'] as String? ?? '';
+                        final createdAt =
+                            DateTime.tryParse(
+                              review['created_at'] as String? ?? '',
+                            ) ??
+                            DateTime.now();
 
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              elevation: 1,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          elevation: 1,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
                                   children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            clientName,
-                                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
+                                    Expanded(
+                                      child: Text(
+                                        clientName,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 16,
                                         ),
-                                        _buildStars(rating),
-                                      ],
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(serviceName, style: TextStyle(color: Colors.grey[700], fontSize: 13)),
-                                    if (comment.isNotEmpty) ...[
-                                      const SizedBox(height: 10),
-                                      Text(comment, style: const TextStyle(height: 1.4)),
-                                    ],
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      _formatDate(createdAt),
-                                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                                    ),
+                                    _buildStars(rating),
                                   ],
                                 ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  serviceName,
+                                  style: TextStyle(
+                                    color: Colors.grey[700],
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                if (comment.isNotEmpty) ...[
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    comment,
+                                    style: const TextStyle(height: 1.4),
+                                  ),
+                                ],
+                                const SizedBox(height: 12),
+                                Text(
+                                  _formatDate(createdAt),
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
           ),
         ],
       ),

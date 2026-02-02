@@ -1,4 +1,3 @@
-// lib/widgets/user/profile_tab/profile_action_button.dart
 import 'package:flutter/material.dart';
 
 class ProfileActionButton extends StatelessWidget {
@@ -24,7 +23,9 @@ class ProfileActionButton extends StatelessWidget {
         label: Text(label),
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(54),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
       );
     }

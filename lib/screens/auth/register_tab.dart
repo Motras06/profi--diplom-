@@ -1,4 +1,3 @@
-// lib/screens/auth/register_tab.dart
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
@@ -20,7 +19,8 @@ class RegisterTab extends StatefulWidget {
   State<RegisterTab> createState() => _RegisterTabState();
 }
 
-class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStateMixin {
+class _RegisterTabState extends State<RegisterTab>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -43,7 +43,7 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
 
   final _picker = ImagePicker();
 
-  static const int maxFileSizeBytes = 1024 * 1024; // 1 МБ
+  static const int maxFileSizeBytes = 1024 * 1024;
 
   @override
   void initState() {
@@ -58,14 +58,14 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
       CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0.0, 0.20),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, 0.20), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
-    // Запуск анимации с небольшой задержкой
     Future.delayed(const Duration(milliseconds: 400), () {
       if (mounted) _animationController.forward();
     });
@@ -128,7 +128,9 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
     }
 
     final tempDir = Directory.systemTemp;
-    final tempFile = File('${tempDir.path}/avatar_compressed_${DateTime.now().millisecondsSinceEpoch}.jpg');
+    final tempFile = File(
+      '${tempDir.path}/avatar_compressed_${DateTime.now().millisecondsSinceEpoch}.jpg',
+    );
     await tempFile.writeAsBytes(bytes);
 
     return tempFile;
@@ -138,8 +140,11 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
     if (_compressedImage == null) return null;
 
     try {
-      final fileName = '$userId/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      await supabase.storage.from('profile').upload(fileName, _compressedImage!);
+      final fileName =
+          '$userId/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      await supabase.storage
+          .from('profile')
+          .upload(fileName, _compressedImage!);
       return supabase.storage.from('profile').getPublicUrl(fileName);
     } catch (e) {
       if (mounted) {
@@ -148,7 +153,9 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
             content: const Text('Ошибка загрузки фото'),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -194,8 +201,12 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
         'role': role,
         'display_name': _displayNameController.text.trim(),
         'photo_url': photoUrl,
-        'about': _selectedRole == UserRole.specialist ? _aboutController.text.trim() : null,
-        'specialty': _selectedRole == UserRole.specialist ? _specialtyController.text.trim() : null,
+        'about': _selectedRole == UserRole.specialist
+            ? _aboutController.text.trim()
+            : null,
+        'specialty': _selectedRole == UserRole.specialist
+            ? _specialtyController.text.trim()
+            : null,
       });
 
       if (mounted) {
@@ -204,7 +215,9 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
             content: const Text('Регистрация успешна!'),
             backgroundColor: Theme.of(context).colorScheme.primary,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
 
@@ -212,9 +225,9 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
             ? SpecialistHome(displayName: _displayNameController.text.trim())
             : UserHome(displayName: _displayNameController.text.trim());
 
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => destination),
-        );
+        Navigator.of(
+          context,
+        ).pushReplacement(MaterialPageRoute(builder: (_) => destination));
       }
     } on AuthException catch (e) {
       if (mounted) {
@@ -228,9 +241,9 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ошибка регистрации')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Ошибка регистрации')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -256,7 +269,6 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
               children: [
                 const SizedBox(height: 16),
 
-                // Аватар — в стиле M3 с ripple эффектом
                 Center(
                   child: InkWell(
                     borderRadius: BorderRadius.circular(80),
@@ -270,11 +282,16 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
                           clipBehavior: Clip.antiAlias,
                           child: CircleAvatar(
                             radius: 60,
-                            backgroundColor: colorScheme.surfaceContainerHighest,
+                            backgroundColor:
+                                colorScheme.surfaceContainerHighest,
                             backgroundImage: _compressedImage != null
                                 ? FileImage(_compressedImage!)
-                                : (_originalImage != null ? FileImage(_originalImage!) : null),
-                            child: (_compressedImage == null && _originalImage == null)
+                                : (_originalImage != null
+                                      ? FileImage(_originalImage!)
+                                      : null),
+                            child:
+                                (_compressedImage == null &&
+                                    _originalImage == null)
                                 ? Icon(
                                     Icons.add_a_photo_rounded,
                                     size: 48,
@@ -288,7 +305,9 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
                             width: 120,
                             height: 120,
                             child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                colorScheme.primary,
+                              ),
                               strokeWidth: 4,
                             ),
                           ),
@@ -303,8 +322,8 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
                   _compressedImage != null
                       ? 'Фото загружено (${(_compressedImage!.lengthSync() ~/ 1024).toStringAsFixed(0)} КБ)'
                       : _isLoading
-                          ? 'Сжатие изображения...'
-                          : 'Нажмите на фото, чтобы выбрать аватар (опционально)',
+                      ? 'Сжатие изображения...'
+                      : 'Нажмите на фото, чтобы выбрать аватар (опционально)',
                   style: textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -313,7 +332,6 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
 
                 const SizedBox(height: 32),
 
-                // SegmentedButton в стиле M3
                 SegmentedButton<UserRole>(
                   style: SegmentedButton.styleFrom(
                     backgroundColor: colorScheme.surfaceContainerHighest,
@@ -321,19 +339,24 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
                     selectedBackgroundColor: colorScheme.primaryContainer,
                     selectedForegroundColor: colorScheme.onPrimaryContainer,
                     side: BorderSide(color: colorScheme.outline),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   segments: const [
                     ButtonSegment(value: UserRole.user, label: Text('Клиент')),
-                    ButtonSegment(value: UserRole.specialist, label: Text('Исполнитель')),
+                    ButtonSegment(
+                      value: UserRole.specialist,
+                      label: Text('Исполнитель'),
+                    ),
                   ],
                   selected: {_selectedRole},
-                  onSelectionChanged: (set) => setState(() => _selectedRole = set.first),
+                  onSelectionChanged: (set) =>
+                      setState(() => _selectedRole = set.first),
                 ),
 
                 const SizedBox(height: 32),
 
-                // Поля ввода — Filled стиль M3
                 TextFormField(
                   controller: _displayNameController,
                   textInputAction: TextInputAction.next,
@@ -342,7 +365,10 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
                     labelText: 'Отображаемое имя *',
                     filled: true,
                     fillColor: colorScheme.surfaceContainerHighest,
-                    prefixIcon: Icon(Icons.person_outline, color: colorScheme.onSurfaceVariant),
+                    prefixIcon: Icon(
+                      Icons.person_outline,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -356,12 +382,17 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
-                  validator: (v) => v!.trim().isEmpty || !v.contains('@') ? 'Неверный email' : null,
+                  validator: (v) => v!.trim().isEmpty || !v.contains('@')
+                      ? 'Неверный email'
+                      : null,
                   decoration: InputDecoration(
                     labelText: 'Email *',
                     filled: true,
                     fillColor: colorScheme.surfaceContainerHighest,
-                    prefixIcon: Icon(Icons.email_outlined, color: colorScheme.onSurfaceVariant),
+                    prefixIcon: Icon(
+                      Icons.email_outlined,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -380,13 +411,20 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
                     labelText: 'Пароль *',
                     filled: true,
                     fillColor: colorScheme.surfaceContainerHighest,
-                    prefixIcon: Icon(Icons.lock_outline, color: colorScheme.onSurfaceVariant),
+                    prefixIcon: Icon(
+                      Icons.lock_outline,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                        _isPasswordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                         color: colorScheme.onSurfaceVariant,
                       ),
-                      onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                      onPressed: () => setState(
+                        () => _isPasswordVisible = !_isPasswordVisible,
+                      ),
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -405,13 +443,21 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
                     labelText: 'Подтвердите пароль *',
                     filled: true,
                     fillColor: colorScheme.surfaceContainerHighest,
-                    prefixIcon: Icon(Icons.lock_outline, color: colorScheme.onSurfaceVariant),
+                    prefixIcon: Icon(
+                      Icons.lock_outline,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                        _isConfirmPasswordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                         color: colorScheme.onSurfaceVariant,
                       ),
-                      onPressed: () => setState(() => _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
+                      onPressed: () => setState(
+                        () => _isConfirmPasswordVisible =
+                            !_isConfirmPasswordVisible,
+                      ),
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -430,7 +476,10 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
                       labelText: 'О себе',
                       filled: true,
                       fillColor: colorScheme.surfaceContainerHighest,
-                      prefixIcon: Icon(Icons.info_outline, color: colorScheme.onSurfaceVariant),
+                      prefixIcon: Icon(
+                        Icons.info_outline,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -447,7 +496,10 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
                       hintText: 'Например: Сантехник, Электрик, Плиточник...',
                       filled: true,
                       fillColor: colorScheme.surfaceContainerHighest,
-                      prefixIcon: Icon(Icons.work_outline, color: colorScheme.onSurfaceVariant),
+                      prefixIcon: Icon(
+                        Icons.work_outline,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -458,7 +510,6 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
 
                 const SizedBox(height: 40),
 
-                // Кнопка регистрации — FilledButton (M3 primary action)
                 FilledButton.icon(
                   onPressed: _isLoading ? null : _registerAndNavigate,
                   icon: _isLoading
@@ -476,9 +527,13 @@ class _RegisterTabState extends State<RegisterTab> with SingleTickerProviderStat
                       : const Text('Зарегистрироваться'),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(56),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     elevation: 0,
-                    textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+                    textStyle: textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
 

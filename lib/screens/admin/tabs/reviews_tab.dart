@@ -1,4 +1,3 @@
-// lib/screens/admin/tabs/reviews_tab.dart
 import 'package:flutter/material.dart';
 import 'package:profi/services/supabase_service.dart';
 
@@ -38,7 +37,10 @@ class _ReviewsTabState extends State<ReviewsTab> {
       });
     } catch (e) {
       setState(() => _loading = false);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
     }
   }
 
@@ -46,16 +48,16 @@ class _ReviewsTabState extends State<ReviewsTab> {
     try {
       await supabase.from('reviews').delete().eq('id', id);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Отзыв удалён')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Отзыв удалён')));
         _loadReviews();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
@@ -73,18 +75,29 @@ class _ReviewsTabState extends State<ReviewsTab> {
         itemCount: _reviews.length,
         itemBuilder: (context, i) {
           final r = _reviews[i];
-          final stars = List.generate(r['rating'], (_) => const Icon(Icons.star, color: Colors.amber, size: 18));
+          final stars = List.generate(
+            r['rating'],
+            (_) => const Icon(Icons.star, color: Colors.amber, size: 18),
+          );
 
           return Card(
             child: ListTile(
               leading: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('${r['rating']}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  Text(
+                    '${r['rating']}',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   Row(children: stars),
                 ],
               ),
-              title: Text(r['profiles!specialist_id']?['display_name'] ?? 'Мастер'),
+              title: Text(
+                r['profiles!specialist_id']?['display_name'] ?? 'Мастер',
+              ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -109,13 +122,19 @@ class _ReviewsTabState extends State<ReviewsTab> {
                     title: const Text('Удалить отзыв?'),
                     content: const Text('Действие нельзя отменить.'),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Отмена'),
+                      ),
                       TextButton(
                         onPressed: () {
                           Navigator.pop(ctx);
                           _deleteReview(r['id']);
                         },
-                        child: const Text('Удалить', style: TextStyle(color: Colors.red)),
+                        child: const Text(
+                          'Удалить',
+                          style: TextStyle(color: Colors.red),
+                        ),
                       ),
                     ],
                   ),

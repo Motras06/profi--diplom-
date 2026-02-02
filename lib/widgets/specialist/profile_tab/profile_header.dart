@@ -1,4 +1,3 @@
-// lib/widgets/specialist/profile_tab/profile_header.dart
 import 'package:flutter/material.dart';
 
 class ProfileHeader extends StatelessWidget {
@@ -37,7 +36,10 @@ class ProfileHeader extends StatelessWidget {
           displayName ?? 'Специалист',
           style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
         ),
-        const Text('Специалист', style: TextStyle(fontSize: 18, color: Colors.grey)),
+        const Text(
+          'Специалист',
+          style: TextStyle(fontSize: 18, color: Colors.grey),
+        ),
         const SizedBox(height: 8),
         Text(
           specialty ?? 'Специальность не указана',
@@ -51,13 +53,19 @@ class ProfileHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('О себе', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                const Text(
+                  'О себе',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 8),
                 Text(
                   about?.isNotEmpty == true
                       ? about!
                       : 'Расскажите о своём опыте, преимуществах и подходе к работе',
-                  style: TextStyle(fontSize: 16, color: about?.isNotEmpty == true ? null : Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: about?.isNotEmpty == true ? null : Colors.grey[600],
+                  ),
                 ),
               ],
             ),

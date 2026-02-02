@@ -1,4 +1,3 @@
-// lib/widgets/user/saved_tab/saved_tab_search_bar.dart
 import 'package:flutter/material.dart';
 
 class SavedTabSearchBar extends StatelessWidget {
@@ -20,7 +19,6 @@ class SavedTabSearchBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
       child: Row(
         children: [
-          // 🔍 Поле поиска
           Expanded(
             child: Container(
               decoration: BoxDecoration(
@@ -46,7 +44,6 @@ class SavedTabSearchBar extends StatelessWidget {
                     Icons.search_rounded,
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
-                  // Убираем все видимые границы
                   border: OutlineInputBorder(
                     borderRadius: radius,
                     borderSide: BorderSide.none,
@@ -63,7 +60,6 @@ class SavedTabSearchBar extends StatelessWidget {
                   fillColor: Colors.transparent,
                   contentPadding: const EdgeInsets.symmetric(vertical: 14),
 
-                  // Кнопка очистки появляется только когда есть текст
                   suffixIcon: controller.text.isNotEmpty
                       ? IconButton(
                           icon: Icon(
@@ -80,7 +76,6 @@ class SavedTabSearchBar extends StatelessWidget {
 
           const SizedBox(width: 10),
 
-          // 🎛 Кнопка фильтров
           Container(
             decoration: BoxDecoration(
               borderRadius: radius,

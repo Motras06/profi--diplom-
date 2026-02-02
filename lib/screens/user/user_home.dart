@@ -1,4 +1,3 @@
-// lib/screens/auth/user_home.dart
 import 'package:flutter/material.dart';
 import 'package:profi/screens/user/main_tab.dart';
 import 'package:profi/screens/user/saved_tab.dart';
@@ -39,7 +38,6 @@ class _UserHomeState extends State<UserHome> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // Цвет панели — чуть приподнятый, с surface tint
     final navBarColor = ElevationOverlay.applySurfaceTint(
       colorScheme.surface,
       colorScheme.surfaceTint,
@@ -62,7 +60,6 @@ class _UserHomeState extends State<UserHome> {
         ),
       ),
 
-      // Нижняя панель с такой же большой тенью, как у карточек
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -70,14 +67,12 @@ class _UserHomeState extends State<UserHome> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(32),
               boxShadow: [
-                // Основная большая тень — как у карточек
                 BoxShadow(
                   color: colorScheme.shadow.withOpacity(0.24),
                   blurRadius: 32,
                   spreadRadius: 8,
                   offset: const Offset(0, 12),
                 ),
-                // Вспомогательная тень для объёма
                 BoxShadow(
                   color: colorScheme.shadow.withOpacity(0.12),
                   blurRadius: 16,
@@ -87,7 +82,7 @@ class _UserHomeState extends State<UserHome> {
               ],
             ),
             child: Material(
-              elevation: 0, // встроенная elevation не нужна — тень уже ручная
+              elevation: 0,
               color: navBarColor,
               borderRadius: BorderRadius.circular(32),
               clipBehavior: Clip.antiAlias,

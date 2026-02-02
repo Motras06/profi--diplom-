@@ -1,4 +1,3 @@
-// lib/widgets/user/main_tab/service_card.dart
 import 'package:flutter/material.dart';
 import '../../../screens/other/service_screen.dart';
 import '../../../screens/other/specialist_profile.dart';
@@ -19,7 +18,8 @@ class ServiceCard extends StatefulWidget {
   State<ServiceCard> createState() => _ServiceCardState();
 }
 
-class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStateMixin {
+class _ServiceCardState extends State<ServiceCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _saveController;
   late Animation<double> _saveScaleAnimation;
 
@@ -35,7 +35,7 @@ class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStat
     _saveScaleAnimation = Tween<double>(begin: 1.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _saveController,
-        curve: Curves.elasticOut, // красивый bounce без assertion
+        curve: Curves.elasticOut, 
       ),
     );
   }
@@ -63,7 +63,8 @@ class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStat
     final specialist = widget.service['profiles'] ?? {};
     final String? photoUrl = widget.service['main_photo'] as String?;
     final String? specialistPhoto = specialist['photo_url'] as String?;
-    final String specialistName = (specialist['display_name'] as String?) ?? 'Мастер';
+    final String specialistName =
+        (specialist['display_name'] as String?) ?? 'Мастер';
 
     final serviceName = (widget.service['name'] as String?) ?? 'Без названия';
     final price = widget.service['price'];
@@ -98,7 +99,9 @@ class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStat
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => ServiceScreen(service: widget.service)),
+              MaterialPageRoute(
+                builder: (_) => ServiceScreen(service: widget.service),
+              ),
             );
           },
           borderRadius: BorderRadius.circular(20),
@@ -118,7 +121,9 @@ class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStat
                           child: Icon(
                             Icons.broken_image_rounded,
                             size: 52,
-                            color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                            color: colorScheme.onSurfaceVariant.withOpacity(
+                              0.6,
+                            ),
                           ),
                         ),
                       ),
@@ -132,9 +137,10 @@ class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStat
                               height: 44,
                               child: CircularProgressIndicator(
                                 strokeWidth: 3,
-                                value: loadingProgress.expectedTotalBytes != null
+                                value:
+                                    loadingProgress.expectedTotalBytes != null
                                     ? loadingProgress.cumulativeBytesLoaded /
-                                        loadingProgress.expectedTotalBytes!
+                                          loadingProgress.expectedTotalBytes!
                                     : null,
                                 color: colorScheme.primary.withOpacity(0.7),
                               ),
@@ -164,7 +170,9 @@ class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStat
                         ),
                         child: IconButton(
                           icon: Icon(
-                            widget.isSaved ? Icons.bookmark : Icons.bookmark_border_rounded,
+                            widget.isSaved
+                                ? Icons.bookmark
+                                : Icons.bookmark_border_rounded,
                             color: Colors.white,
                             size: 26,
                           ),
@@ -188,7 +196,8 @@ class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStat
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => SpecialistProfileScreen(specialist: specialist),
+                            builder: (_) =>
+                                SpecialistProfileScreen(specialist: specialist),
                           ),
                         );
                       },
@@ -198,11 +207,14 @@ class _ServiceCardState extends State<ServiceCard> with SingleTickerProviderStat
                           CircleAvatar(
                             radius: 18,
                             backgroundColor: colorScheme.surfaceContainerHigh,
-                            backgroundImage:
-                                specialistPhoto != null ? NetworkImage(specialistPhoto) : null,
+                            backgroundImage: specialistPhoto != null
+                                ? NetworkImage(specialistPhoto)
+                                : null,
                             child: specialistPhoto == null
                                 ? Text(
-                                    specialistName.isNotEmpty ? specialistName[0].toUpperCase() : 'М',
+                                    specialistName.isNotEmpty
+                                        ? specialistName[0].toUpperCase()
+                                        : 'М',
                                     style: TextStyle(
                                       color: colorScheme.onSurfaceVariant,
                                       fontSize: 14,

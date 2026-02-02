@@ -1,4 +1,3 @@
-// lib/screens/admin/tabs/users_tab.dart
 import 'package:flutter/material.dart';
 import 'package:profi/services/supabase_service.dart';
 
@@ -36,9 +35,9 @@ class _UsersTabState extends State<UsersTab> {
     } catch (e) {
       setState(() => _loading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка загрузки: $e')));
       }
     }
   }
@@ -67,7 +66,9 @@ class _UsersTabState extends State<UsersTab> {
               backgroundImage: user['photo_url'] != null
                   ? NetworkImage(user['photo_url'])
                   : null,
-              child: user['photo_url'] == null ? const Icon(Icons.person) : null,
+              child: user['photo_url'] == null
+                  ? const Icon(Icons.person)
+                  : null,
             ),
             title: Text(name),
             subtitle: Text(
@@ -80,10 +81,7 @@ class _UsersTabState extends State<UsersTab> {
                     backgroundColor: Colors.green[100],
                   )
                 : null,
-            onTap: () {
-              // → переход на детальный экран пользователя / мастера
-              // можно передать user['id']
-            },
+            onTap: () {},
           );
         },
       ),

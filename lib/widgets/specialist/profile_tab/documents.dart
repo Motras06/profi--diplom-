@@ -1,4 +1,3 @@
-// lib/widgets/specialist/profile_tab/documents.dart
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
@@ -20,8 +19,8 @@ class _SpecialistDocumentsState extends State<SpecialistDocuments> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _documents = [];
 
-  final String _tableName = 'documents';   // таблица в БД
-  final String _bucketName = 'document';   // бакет в Storage
+  final String _tableName = 'documents';
+  final String _bucketName = 'document';
 
   @override
   void initState() {
@@ -37,7 +36,7 @@ class _SpecialistDocumentsState extends State<SpecialistDocuments> {
       if (currentUser == null) throw Exception('Пользователь не авторизован');
 
       final response = await supabase
-          .from(_tableName)  // documents
+          .from(_tableName)
           .select('*')
           .eq('specialist_id', currentUser.id)
           .order('created_at', ascending: false);
@@ -48,7 +47,10 @@ class _SpecialistDocumentsState extends State<SpecialistDocuments> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Ошибка загрузки: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -77,16 +79,18 @@ class _SpecialistDocumentsState extends State<SpecialistDocuments> {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = '${currentUser.id}/$timestamp-${file.name}';
 
-      // Загрузка в бакет 'document'
-      await supabase.storage.from(_bucketName).upload(
-        fileName,
-        File(filePath),
-        fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
-      );
+      await supabase.storage
+          .from(_bucketName)
+          .upload(
+            fileName,
+            File(filePath),
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+          );
 
-      final publicUrl = supabase.storage.from(_bucketName).getPublicUrl(fileName);
+      final publicUrl = supabase.storage
+          .from(_bucketName)
+          .getPublicUrl(fileName);
 
-      // Диалог
       String displayName = file.name;
       String? description;
 
@@ -100,17 +104,34 @@ class _SpecialistDocumentsState extends State<SpecialistDocuments> {
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Название')),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Название'),
+                ),
                 const SizedBox(height: 16),
-                TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Описание (опционально)'), minLines: 2, maxLines: 4),
+                TextField(
+                  controller: descCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Описание (опционально)',
+                  ),
+                  minLines: 2,
+                  maxLines: 4,
+                ),
               ],
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Отмена'),
+              ),
               FilledButton(
                 onPressed: () {
-                  displayName = nameCtrl.text.trim().isEmpty ? file.name : nameCtrl.text.trim();
-                  description = descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim();
+                  displayName = nameCtrl.text.trim().isEmpty
+                      ? file.name
+                      : nameCtrl.text.trim();
+                  description = descCtrl.text.trim().isEmpty
+                      ? null
+                      : descCtrl.text.trim();
                   Navigator.pop(ctx);
                 },
                 child: const Text('Сохранить'),
@@ -130,9 +151,9 @@ class _SpecialistDocumentsState extends State<SpecialistDocuments> {
       await _loadDocuments();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Документ добавлен')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Документ добавлен')));
       }
     } catch (e, stack) {
       debugPrint('Error in _addDocument: $e\n$stack');
@@ -146,13 +167,19 @@ class _SpecialistDocumentsState extends State<SpecialistDocuments> {
 
   Future<void> _downloadAndOpen(String fileUrl, String fileName) async {
     try {
-      // Извлекаем путь внутри бакета 'document'
       final uri = Uri.parse(fileUrl);
-      final pathInBucket = uri.pathSegments.skipWhile((s) => s != _bucketName).skip(1).join('/');
+      final pathInBucket = uri.pathSegments
+          .skipWhile((s) => s != _bucketName)
+          .skip(1)
+          .join('/');
 
-      final signedUrl = await supabase.storage.from(_bucketName).createSignedUrl(pathInBucket, 3600);
+      final signedUrl = await supabase.storage
+          .from(_bucketName)
+          .createSignedUrl(pathInBucket, 3600);
 
-      final dir = Platform.isAndroid ? await getExternalStorageDirectory() : await getTemporaryDirectory();
+      final dir = Platform.isAndroid
+          ? await getExternalStorageDirectory()
+          : await getTemporaryDirectory();
       final savePath = '${dir!.path}/$fileName';
 
       final dio = Dio();
@@ -165,7 +192,10 @@ class _SpecialistDocumentsState extends State<SpecialistDocuments> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка скачивания/открытия: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Ошибка скачивания/открытия: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -184,56 +214,88 @@ class _SpecialistDocumentsState extends State<SpecialistDocuments> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _documents.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.description_outlined, size: 100, color: Colors.grey[400]),
-                        const SizedBox(height: 32),
-                        const Text('У вас нет загруженных документов', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
-                        const SizedBox(height: 16),
-                        Text('Добавьте сертификаты, дипломы или лицензии,\nчтобы повысить доверие клиентов', style: TextStyle(fontSize: 16, color: Colors.grey[600]), textAlign: TextAlign.center),
-                      ],
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.description_outlined,
+                      size: 100,
+                      color: Colors.grey[400],
                     ),
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadDocuments,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _documents.length,
-                    itemBuilder: (context, index) {
-                      final doc = _documents[index];
-                      final name = doc['name'] as String? ?? 'Без названия';
-                      final description = doc['description'] as String? ?? 'Нет описания';
-                      final fileUrl = doc['file_url'] as String;
-                      final createdAt = DateTime.parse(doc['created_at'] as String);
-
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: ListTile(
-                          leading: Icon(Icons.description, color: theme.colorScheme.primary, size: 40),
-                          title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 4),
-                              Text(description, style: TextStyle(color: Colors.grey[600])),
-                              const SizedBox(height: 4),
-                              Text('Добавлен: ${_formatDate(createdAt)}', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-                            ],
-                          ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.download),
-                            onPressed: () => _downloadAndOpen(fileUrl, name),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                    const SizedBox(height: 32),
+                    const Text(
+                      'У вас нет загруженных документов',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Добавьте сертификаты, дипломы или лицензии,\nчтобы повысить доверие клиентов',
+                      style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _loadDocuments,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _documents.length,
+                itemBuilder: (context, index) {
+                  final doc = _documents[index];
+                  final name = doc['name'] as String? ?? 'Без названия';
+                  final description =
+                      doc['description'] as String? ?? 'Нет описания';
+                  final fileUrl = doc['file_url'] as String;
+                  final createdAt = DateTime.parse(doc['created_at'] as String);
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.description,
+                        color: theme.colorScheme.primary,
+                        size: 40,
+                      ),
+                      title: Text(
+                        name,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          Text(
+                            description,
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Добавлен: ${_formatDate(createdAt)}',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.download),
+                        onPressed: () => _downloadAndOpen(fileUrl, name),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addDocument,
         icon: const Icon(Icons.add),

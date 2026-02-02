@@ -1,4 +1,3 @@
-// lib/widgets/user/saved_tab/saved_tab_filters_bottom_sheet.dart
 import 'package:flutter/material.dart';
 import '../../../services/saved_service_service.dart';
 
@@ -13,7 +12,8 @@ class SavedTabFiltersBottomSheet extends StatefulWidget {
   });
 
   @override
-  State<SavedTabFiltersBottomSheet> createState() => _SavedTabFiltersBottomSheetState();
+  State<SavedTabFiltersBottomSheet> createState() =>
+      _SavedTabFiltersBottomSheetState();
 }
 
 class _SavedTabFiltersBottomSheetState extends State<SavedTabFiltersBottomSheet>
@@ -41,16 +41,15 @@ class _SavedTabFiltersBottomSheetState extends State<SavedTabFiltersBottomSheet>
       duration: const Duration(milliseconds: 600),
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0.0, 0.30),
       end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
     _controller.forward();
   }
@@ -88,7 +87,6 @@ class _SavedTabFiltersBottomSheetState extends State<SavedTabFiltersBottomSheet>
           ),
           child: Column(
             children: [
-              // Drag handle
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Container(
@@ -100,8 +98,6 @@ class _SavedTabFiltersBottomSheetState extends State<SavedTabFiltersBottomSheet>
                   ),
                 ),
               ),
-
-              // Заголовок
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
                 child: Text(
@@ -112,14 +108,11 @@ class _SavedTabFiltersBottomSheetState extends State<SavedTabFiltersBottomSheet>
                   ),
                 ),
               ),
-
               const Divider(height: 1),
-
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.all(24),
                   children: [
-                    // Сортировка
                     Text(
                       'Сортировка',
                       style: textTheme.headlineSmall?.copyWith(
@@ -142,7 +135,6 @@ class _SavedTabFiltersBottomSheetState extends State<SavedTabFiltersBottomSheet>
 
                     const SizedBox(height: 32),
 
-                    // Диапазон цены
                     Text(
                       'Диапазон цены (BYN)',
                       style: textTheme.headlineSmall?.copyWith(
@@ -187,10 +179,7 @@ class _SavedTabFiltersBottomSheetState extends State<SavedTabFiltersBottomSheet>
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 32),
-
-                    // Специальность
                     Text(
                       'Специальность',
                       style: textTheme.headlineSmall?.copyWith(
@@ -199,12 +188,12 @@ class _SavedTabFiltersBottomSheetState extends State<SavedTabFiltersBottomSheet>
                       ),
                     ),
                     const SizedBox(height: 12),
-
                     Wrap(
                       spacing: 10,
                       runSpacing: 10,
                       children: widget.service.availableSpecialties.map((spec) {
-                        final selected = widget.service.selectedSpecialties.contains(spec);
+                        final selected = widget.service.selectedSpecialties
+                            .contains(spec);
                         return FilterChip(
                           label: Text(spec),
                           selected: selected,
@@ -217,16 +206,17 @@ class _SavedTabFiltersBottomSheetState extends State<SavedTabFiltersBottomSheet>
                           checkmarkColor: colorScheme.onPrimaryContainer,
                           backgroundColor: colorScheme.surfaceContainerHighest,
                           labelStyle: TextStyle(
-                            color: selected ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
+                            color: selected
+                                ? colorScheme.onPrimaryContainer
+                                : colorScheme.onSurface,
                           ),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         );
                       }).toList(),
                     ),
-
                     const SizedBox(height: 48),
-
-                    // Кнопки
                     Row(
                       children: [
                         Expanded(
@@ -240,12 +230,16 @@ class _SavedTabFiltersBottomSheetState extends State<SavedTabFiltersBottomSheet>
                             },
                             style: OutlinedButton.styleFrom(
                               side: BorderSide(color: colorScheme.outline),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                             child: Text(
                               'Сбросить',
-                              style: textTheme.labelLarge?.copyWith(color: colorScheme.primary),
+                              style: textTheme.labelLarge?.copyWith(
+                                color: colorScheme.primary,
+                              ),
                             ),
                           ),
                         ),
@@ -264,12 +258,16 @@ class _SavedTabFiltersBottomSheetState extends State<SavedTabFiltersBottomSheet>
                               backgroundColor: colorScheme.primary,
                               foregroundColor: colorScheme.onPrimary,
                               minimumSize: const Size(double.infinity, 56),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                               elevation: 0,
                             ),
                             child: Text(
                               'Применить',
-                              style: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+                              style: textTheme.labelLarge?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
@@ -302,7 +300,9 @@ class _SavedTabFiltersBottomSheetState extends State<SavedTabFiltersBottomSheet>
       selectedColor: colorScheme.primaryContainer,
       backgroundColor: colorScheme.surfaceContainerHighest,
       labelStyle: TextStyle(
-        color: selected ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
+        color: selected
+            ? colorScheme.onPrimaryContainer
+            : colorScheme.onSurface,
         fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

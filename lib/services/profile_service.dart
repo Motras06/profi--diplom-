@@ -1,11 +1,9 @@
-// lib/services/profile_service.dart
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/profile_stats.dart';
 
 class ProfileService {
   final supabase = Supabase.instance.client;
 
-  /// ===== Профиль =====
   Future<Map<String, dynamic>> fetchProfile(String userId) async {
     final response = await supabase
         .from('profiles')
@@ -16,15 +14,12 @@ class ProfileService {
     return response;
   }
 
-  /// ===== Статистика =====
   Future<ProfileStats> fetchStats(String userId, String? role) async {
-    // ---- Заказы ----
     final ordersCount = await supabase
         .from('orders')
         .count()
         .eq('user_id', userId);
 
-    // ---- Сохранённые услуги ----
     final savedCount = await supabase
         .from('saved_services')
         .count()
@@ -33,7 +28,6 @@ class ProfileService {
     int reviewsCount = 0;
     double avgRating = 0.0;
 
-    // ---- Отзывы ----
     if (role == 'specialist') {
       final reviews = await supabase
           .from('reviews')
@@ -47,8 +41,7 @@ class ProfileService {
             .map((e) => (e['rating'] as num).toDouble())
             .toList();
 
-        avgRating =
-            ratings.reduce((a, b) => a + b) / ratings.length;
+        avgRating = ratings.reduce((a, b) => a + b) / ratings.length;
       }
     } else {
       reviewsCount = await supabase
@@ -65,15 +58,14 @@ class ProfileService {
     );
   }
 
-  /// ===== Обновление профиля =====
   Future<void> updateProfile(
     String userId,
     String displayName,
     String? photoUrl,
   ) async {
-    await supabase.from('profiles').update({
-      'display_name': displayName.trim(),
-      'photo_url': photoUrl,
-    }).eq('id', userId);
+    await supabase
+        .from('profiles')
+        .update({'display_name': displayName.trim(), 'photo_url': photoUrl})
+        .eq('id', userId);
   }
 }

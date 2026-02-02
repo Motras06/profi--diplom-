@@ -1,4 +1,3 @@
-// lib/widgets/other/settings_screen/theme_selector_bottom_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/theme_provider.dart';
@@ -21,9 +20,9 @@ class ThemeSelectorBottomSheet extends StatelessWidget {
             child: Text(
               'Выберите тему',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.primary,
-                  ),
+                fontWeight: FontWeight.w600,
+                color: colorScheme.primary,
+              ),
             ),
           ),
           RadioListTile<ThemeMode>(

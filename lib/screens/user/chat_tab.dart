@@ -1,4 +1,3 @@
-// lib/widgets/user/chat_tab.dart
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
@@ -92,7 +91,6 @@ class _UserChatTabState extends State<UserChatTab>
     }
 
     try {
-      // Получаем все сообщения
       final messages = await supabase
           .from('chat_messages')
           .select('id, sender_id, receiver_id, message, timestamp')
@@ -228,7 +226,7 @@ class _UserChatTabState extends State<UserChatTab>
                   ),
                 ),
               )
-            : Text('Чаты', style: TextStyle(color: colorScheme.onSurface),),
+            : Text('Чаты', style: TextStyle(color: colorScheme.onSurface)),
         actions: [
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 280),
@@ -253,8 +251,6 @@ class _UserChatTabState extends State<UserChatTab>
                   ),
           ),
         ],
-        // elevation: 0,
-        // scrolledUnderElevation: 2,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(

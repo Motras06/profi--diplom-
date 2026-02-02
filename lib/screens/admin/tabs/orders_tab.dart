@@ -1,4 +1,3 @@
-// lib/screens/admin/tabs/orders_tab.dart
 import 'package:flutter/material.dart';
 import 'package:profi/services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -30,42 +29,40 @@ class _OrdersTabState extends State<OrdersTab> {
   }
 
   Future<void> _loadOrders() async {
-  setState(() => _isLoading = true);
+    setState(() => _isLoading = true);
 
-  try {
-    var baseQuery = supabase
-        .from('orders')
-        .select('''
+    try {
+      var baseQuery = supabase.from('orders').select('''
           id, user_id, specialist_id, service_id, status, created_at, updated_at,
           profiles!user_id (display_name),
           profiles!specialist_id (display_name)
         ''');
 
-    PostgrestFilterBuilder filteredQuery;
+      PostgrestFilterBuilder filteredQuery;
 
-    if (_selectedStatusFilter != null && _selectedStatusFilter != 'all') {
-      filteredQuery = baseQuery.eq('status', _selectedStatusFilter!);
-    } else {
-      filteredQuery = baseQuery;
-    }
+      if (_selectedStatusFilter != null && _selectedStatusFilter != 'all') {
+        filteredQuery = baseQuery.eq('status', _selectedStatusFilter!);
+      } else {
+        filteredQuery = baseQuery;
+      }
 
-    final finalQuery = filteredQuery.order('created_at', ascending: false);
+      final finalQuery = filteredQuery.order('created_at', ascending: false);
 
-    final response = await finalQuery;
+      final response = await finalQuery;
 
-    setState(() {
-      _orders = List<Map<String, dynamic>>.from(response);
-      _isLoading = false;
-    });
-  } catch (e) {
-    setState(() => _isLoading = false);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка загрузки: $e')),
-      );
+      setState(() {
+        _orders = List<Map<String, dynamic>>.from(response);
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка загрузки: $e')));
+      }
     }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -94,51 +91,59 @@ class _OrdersTabState extends State<OrdersTab> {
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : _orders.isEmpty
-                  ? const Center(child: Text('Заказов не найдено'))
-                  : RefreshIndicator(
-                      onRefresh: _loadOrders,
-                      child: ListView.builder(
-                        itemCount: _orders.length,
-                        itemBuilder: (context, index) {
-                          final order = _orders[index];
-                          final status = order['status'] as String? ?? '—';
-                          final bgColor = _statusColors[status] ?? Colors.grey.shade100;
+              ? const Center(child: Text('Заказов не найдено'))
+              : RefreshIndicator(
+                  onRefresh: _loadOrders,
+                  child: ListView.builder(
+                    itemCount: _orders.length,
+                    itemBuilder: (context, index) {
+                      final order = _orders[index];
+                      final status = order['status'] as String? ?? '—';
+                      final bgColor =
+                          _statusColors[status] ?? Colors.grey.shade100;
 
-                          return Card(
-                            color: bgColor,
-                            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: Colors.blueGrey.shade200,
-                                child: Text('#${order['id']}'),
+                      return Card(
+                        color: bgColor,
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.blueGrey.shade200,
+                            child: Text('#${order['id']}'),
+                          ),
+                          title: Text(
+                            order['profiles!specialist_id']?['display_name'] ??
+                                'Мастер не указан',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Клиент: ${order['profiles!user_id']?['display_name'] ?? '?'}',
                               ),
-                              title: Text(
-                                order['profiles!specialist_id']?['display_name'] ?? 'Мастер не указан',
-                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              Text(
+                                'Статус: $status • ${order['created_at']?.substring(0, 10) ?? ''}',
                               ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Клиент: ${order['profiles!user_id']?['display_name'] ?? '?'}'),
-                                  Text('Статус: $status • ${order['created_at']?.substring(0, 10) ?? ''}'),
-                                ],
-                              ),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.more_vert),
-                                onPressed: () {
-                                  // Здесь можно открыть bottom sheet с действиями:
-                                  // Изменить статус, посмотреть детали, написать пользователю/мастеру и т.д.
-                                  showModalBottomSheet(
-                                    context: context,
-                                    builder: (ctx) => _OrderActionsBottomSheet(order: order),
-                                  );
-                                },
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                            ],
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.more_vert),
+                            onPressed: () {
+                              showModalBottomSheet(
+                                context: context,
+                                builder: (ctx) =>
+                                    _OrderActionsBottomSheet(order: order),
+                              );
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
         ),
       ],
     );
@@ -160,7 +165,6 @@ class _OrderActionsBottomSheet extends StatelessWidget {
             leading: const Icon(Icons.edit),
             title: const Text('Изменить статус'),
             onTap: () {
-              // → диалог с выбором нового статуса
               Navigator.pop(context);
             },
           ),
@@ -168,15 +172,16 @@ class _OrderActionsBottomSheet extends StatelessWidget {
             leading: const Icon(Icons.info_outline),
             title: const Text('Подробная информация'),
             onTap: () {
-              // → экран с contract_details (jsonb), датами и т.д.
               Navigator.pop(context);
             },
           ),
           ListTile(
             leading: const Icon(Icons.block, color: Colors.red),
-            title: const Text('Отменить / заблокировать', style: TextStyle(color: Colors.red)),
+            title: const Text(
+              'Отменить / заблокировать',
+              style: TextStyle(color: Colors.red),
+            ),
             onTap: () {
-              // логика отмены / жалобы
               Navigator.pop(context);
             },
           ),

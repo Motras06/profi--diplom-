@@ -1,13 +1,9 @@
-// lib/widgets/other/settings_screen/settings_section_header.dart
 import 'package:flutter/material.dart';
 
 class SettingsSectionHeader extends StatelessWidget {
   final String title;
 
-  const SettingsSectionHeader({
-    super.key,
-    required this.title,
-  });
+  const SettingsSectionHeader({super.key, required this.title});
 
   @override
   Widget build(BuildContext context) {

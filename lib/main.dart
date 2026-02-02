@@ -38,11 +38,9 @@ final supabase = Supabase.instance.client;
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
 
-  // Определяем стартовый экран в зависимости от роли пользователя
   Future<Widget> _getStartingScreen() async {
     final currentUser = supabase.auth.currentUser;
 
-    // Если пользователь не авторизован — экран входа
     if (currentUser == null) {
       return const AuthScreen();
     }
@@ -63,7 +61,6 @@ class MainApp extends StatelessWidget {
         return UserHome(displayName: displayName);
       }
     } catch (e) {
-      // Если профиль не найден или ошибка — возвращаем на авторизацию
       return const AuthScreen();
     }
   }
@@ -76,12 +73,10 @@ class MainApp extends StatelessWidget {
       title: 'ProWirkSearch',
       debugShowCheckedModeBanner: false,
 
-      // ← Вот ключевые изменения
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeProvider.themeMode,
 
-      // DevicePreview настройки
       useInheritedMediaQuery: true,
       locale: DevicePreview.locale(context),
       builder: DevicePreview.appBuilder,
@@ -100,45 +95,3 @@ class MainApp extends StatelessWidget {
     );
   }
 }
-
-/*
-================================================================================
-ИНСТРУКЦИЯ ПО ПОВТОРНОМУ ПОДКЛЮЧЕНИЮ DEVICE PREVIEW (для разработки)
-================================================================================
-
-Если тебе нужно снова включить DevicePreview (для тестирования на разных устройствах):
-
-1. Убедись, что в pubspec.yaml есть зависимость:
-   dependencies:
-     device_preview: ^1.0.0
-
-2. Замени содержимое main() и runApp на это:
-
-   void main() async {
-     WidgetsFlutterBinding.ensureInitialized();
-
-     await dotenv.load(fileName: ".env");
-
-     await Supabase.initialize(
-       url: dotenv.env['SUPABASE_URL']!,
-       anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
-     );
-
-     runApp(
-       DevicePreview(
-         enabled: !kReleaseMode, // Автоматически выключается в релизе
-         builder: (context) => const MainApp(),
-       ),
-     );
-   }
-
-3. В MaterialApp добавь:
-   useInheritedMediaQuery: true,
-   locale: DevicePreview.locale(context),
-   builder: DevicePreview.appBuilder,
-
-Готово! Теперь можно тестировать на разных экранах, шрифтах и локалях.
-
-Удаляй эти строки при финальной сборке/показе.
-================================================================================
-*/

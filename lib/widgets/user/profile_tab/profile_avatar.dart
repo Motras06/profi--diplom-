@@ -1,15 +1,10 @@
-// lib/widgets/user/profile_tab/profile_avatar.dart
 import 'package:flutter/material.dart';
 
 class ProfileAvatar extends StatelessWidget {
   final String? photoUrl;
   final String? displayName;
 
-  const ProfileAvatar({
-    super.key,
-    this.photoUrl,
-    this.displayName,
-  });
+  const ProfileAvatar({super.key, this.photoUrl, this.displayName});
 
   @override
   Widget build(BuildContext context) {

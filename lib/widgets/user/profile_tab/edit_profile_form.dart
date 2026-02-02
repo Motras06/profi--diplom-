@@ -27,7 +27,8 @@ class EditProfileForm extends StatefulWidget {
   State<EditProfileForm> createState() => _EditProfileFormState();
 }
 
-class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProviderStateMixin {
+class _EditProfileFormState extends State<EditProfileForm>
+    with SingleTickerProviderStateMixin {
   late TextEditingController _nameController;
   File? _newPhotoFile;
   bool _isSaving = false;
@@ -46,10 +47,14 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
       duration: const Duration(milliseconds: 420),
     );
     _avatarScaleAnimation = Tween<double>(begin: 0.88, end: 1.0).animate(
-      CurvedAnimation(parent: _avatarAnimController, curve: Curves.easeOutCubic),
+      CurvedAnimation(
+        parent: _avatarAnimController,
+        curve: Curves.easeOutCubic,
+      ),
     );
 
-    if (widget.initialPhotoUrl != null || widget.initialName.trim().isNotEmpty) {
+    if (widget.initialPhotoUrl != null ||
+        widget.initialName.trim().isNotEmpty) {
       _avatarAnimController.forward();
     }
   }
@@ -94,7 +99,9 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
         quality -= 12;
       }
 
-      final tempFile = File('${Directory.systemTemp.path}/compressed_avatar_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      final tempFile = File(
+        '${Directory.systemTemp.path}/compressed_avatar_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
       await tempFile.writeAsBytes(bytes);
       return tempFile;
     } catch (_) {
@@ -105,14 +112,15 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
   Future<String?> _uploadNewPhoto(String userId) async {
     if (_newPhotoFile == null) return widget.initialPhotoUrl;
     try {
-      final fileName = '$userId/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final fileName =
+          '$userId/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
       await supabase.storage.from('profile').upload(fileName, _newPhotoFile!);
       return supabase.storage.from('profile').getPublicUrl(fileName);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки фото: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка загрузки фото: $e')));
       }
       return widget.initialPhotoUrl;
     }
@@ -121,9 +129,9 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
   Future<void> _save() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Имя не может быть пустым')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Имя не может быть пустым')));
       return;
     }
 
@@ -136,9 +144,9 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
       await widget.onSave(name, newPhotoUrl);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Не удалось сохранить: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Не удалось сохранить: $e')));
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -188,7 +196,10 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
                   duration: const Duration(milliseconds: 480),
                   transitionBuilder: (child, animation) => FadeTransition(
                     opacity: animation,
-                    child: ScaleTransition(scale: _avatarScaleAnimation, child: child),
+                    child: ScaleTransition(
+                      scale: _avatarScaleAnimation,
+                      child: child,
+                    ),
                   ),
                   child: Stack(
                     key: ValueKey<bool>(_newPhotoFile != null),
@@ -207,12 +218,16 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
                           foregroundImage: _newPhotoFile != null
                               ? FileImage(_newPhotoFile!)
                               : (widget.initialPhotoUrl != null
-                                  ? NetworkImage(widget.initialPhotoUrl!)
-                                  : null),
-                          child: (_newPhotoFile == null && widget.initialPhotoUrl == null)
+                                    ? NetworkImage(widget.initialPhotoUrl!)
+                                    : null),
+                          child:
+                              (_newPhotoFile == null &&
+                                  widget.initialPhotoUrl == null)
                               ? Text(
                                   _nameController.text.trim().isNotEmpty
-                                      ? _nameController.text.trim()[0].toUpperCase()
+                                      ? _nameController.text
+                                            .trim()[0]
+                                            .toUpperCase()
                                       : '?',
                                   style: TextStyle(
                                     fontSize: 72,
@@ -254,7 +269,9 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
                               color: Colors.black45,
                             ),
                             child: const Center(
-                              child: CircularProgressIndicator(color: Colors.white),
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
@@ -286,7 +303,9 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
             const SizedBox(height: 40),
 
             OutlinedButton.icon(
-              onPressed: _isSaving ? null : () => ChangePasswordDialog.show(context),
+              onPressed: _isSaving
+                  ? null
+                  : () => ChangePasswordDialog.show(context),
               icon: const Icon(Icons.key_rounded, size: 20),
               label: const Text('Сменить пароль'),
               style: OutlinedButton.styleFrom(

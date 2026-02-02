@@ -1,4 +1,3 @@
-// lib/screens/auth/auth_screen.dart
 import 'package:flutter/material.dart';
 import 'login_tab.dart';
 import 'register_tab.dart';
@@ -10,7 +9,8 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMixin {
+class _AuthScreenState extends State<AuthScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -36,13 +36,11 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       body: SafeArea(
         child: Column(
           children: [
-            // Верхняя часть с заголовком и подзаголовком (Material 3 стиль)
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 48, 24, 32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Анимированный fade-in заголовок
                   AnimatedOpacity(
                     opacity: 1.0,
                     duration: const Duration(milliseconds: 800),
@@ -72,16 +70,12 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
               ),
             ),
 
-            // TabBar в стиле Material 3 — primary indicator, rounded
             TabBar(
               controller: _tabController,
               isScrollable: false,
               dividerColor: Colors.transparent,
               indicator: UnderlineTabIndicator(
-                borderSide: BorderSide(
-                  color: colorScheme.primary,
-                  width: 3.0,
-                ),
+                borderSide: BorderSide(color: colorScheme.primary, width: 3.0),
                 insets: const EdgeInsets.symmetric(horizontal: 24),
               ),
               labelColor: colorScheme.primary,
@@ -96,19 +90,13 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
               ],
             ),
 
-            // TabBarView с анимацией перехода (fade + slight slide)
             Expanded(
-  child: TabBarView(
-    controller: _tabController,
-    children: const [
-      LoginTab(),
-      RegisterTab(),
-    ],
-  ),
-),
+              child: TabBarView(
+                controller: _tabController,
+                children: const [LoginTab(), RegisterTab()],
+              ),
+            ),
 
-            // Нижняя часть — ссылка на гостевой режим (если нужно вернуть позже)
-            // Пока убрана по вашему запросу
             const SizedBox(height: 32),
           ],
         ),

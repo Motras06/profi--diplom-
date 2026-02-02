@@ -1,9 +1,8 @@
-// lib/screens/other/service_screen.dart
 import 'package:flutter/material.dart';
 import 'package:profi/screens/other/service_chat_screen.dart';
 import 'package:profi/screens/other/order_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'specialist_profile.dart'; // импорт профиля специалиста
+import 'specialist_profile.dart';
 
 class ServiceScreen extends StatefulWidget {
   final Map<String, dynamic> service;
@@ -24,7 +23,6 @@ class _ServiceScreenState extends State<ServiceScreen> {
   double _averageRating = 0.0;
   int _reviewCount = 0;
 
-  // Для текущего пользователя
   bool _hasUserReview = false;
   int? _userReviewId;
   int? _userRating;
@@ -60,9 +58,9 @@ class _ServiceScreenState extends State<ServiceScreen> {
     } catch (e) {
       setState(() => _isLoadingPhotos = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки фото: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка загрузки фото: $e')));
       }
     }
   }
@@ -79,7 +77,6 @@ class _ServiceScreenState extends State<ServiceScreen> {
     }
 
     try {
-      // Все отзывы по услуге
       final reviewsRes = await supabase
           .from('reviews')
           .select('''
@@ -89,7 +86,6 @@ class _ServiceScreenState extends State<ServiceScreen> {
           .eq('service_id', serviceId)
           .order('created_at', ascending: false);
 
-      // Отзыв текущего пользователя
       Map<String, dynamic>? userReview;
       if (userId != null) {
         final userReviewRes = await supabase
@@ -120,7 +116,6 @@ class _ServiceScreenState extends State<ServiceScreen> {
         });
       }
 
-      // Данные отзыва пользователя
       if (userReview != null) {
         setState(() {
           _hasUserReview = true;
@@ -138,9 +133,9 @@ class _ServiceScreenState extends State<ServiceScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки отзывов: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка загрузки отзывов: $e')));
       }
     } finally {
       setState(() => _isLoadingReviews = false);
@@ -149,17 +144,17 @@ class _ServiceScreenState extends State<ServiceScreen> {
 
   Future<void> _submitOrUpdateReview() async {
     if (_selectedRating == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Поставьте оценку')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Поставьте оценку')));
       return;
     }
 
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Войдите в аккаунт')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Войдите в аккаунт')));
       return;
     }
 
@@ -178,14 +173,14 @@ class _ServiceScreenState extends State<ServiceScreen> {
 
       if (_hasUserReview && _userReviewId != null) {
         await supabase.from('reviews').update(data).eq('id', _userReviewId!);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Отзыв обновлён')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Отзыв обновлён')));
       } else {
         await supabase.from('reviews').insert(data);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Отзыв добавлен')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Отзыв добавлен')));
       }
 
       Navigator.pop(context);
@@ -193,22 +188,25 @@ class _ServiceScreenState extends State<ServiceScreen> {
       _selectedRating = null;
       await _loadReviewsAndUserReview();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
     }
   }
 
   void _showReviewDialog() {
-    // Инициализируем локальное состояние диалога
     int localRating = _hasUserReview ? (_userRating ?? 0) : 0;
-    final localController = TextEditingController(text: _hasUserReview ? _userComment ?? '' : '');
+    final localController = TextEditingController(
+      text: _hasUserReview ? _userComment ?? '' : '',
+    );
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(_hasUserReview ? 'Редактировать отзыв' : 'Оставить отзыв'),
+          title: Text(
+            _hasUserReview ? 'Редактировать отзыв' : 'Оставить отзыв',
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -221,7 +219,9 @@ class _ServiceScreenState extends State<ServiceScreen> {
                     return IconButton(
                       icon: Icon(
                         Icons.star,
-                        color: i < localRating ? Colors.amber : Colors.grey[400],
+                        color: i < localRating
+                            ? Colors.amber
+                            : Colors.grey[400],
                         size: 40,
                       ),
                       onPressed: () {
@@ -262,37 +262,32 @@ class _ServiceScreenState extends State<ServiceScreen> {
         ),
       ),
     ).then((_) {
-      // Сбрасываем состояние после закрытия
       _selectedRating = null;
       _reviewController.clear();
     });
   }
 
   void _openChat() {
-  final specialist = widget.service['profiles'] ?? {};
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => ServiceChatScreen(
-        specialist: specialist,
-        service: widget.service,
+    final specialist = widget.service['profiles'] ?? {};
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            ServiceChatScreen(specialist: specialist, service: widget.service),
       ),
-    ),
-  );
-}
+    );
+  }
 
-void _orderService() {
-  final specialist = widget.service['profiles'] ?? {};
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => OrderScreen(
-        service: widget.service,
-        specialist: specialist,
+  void _orderService() {
+    final specialist = widget.service['profiles'] ?? {};
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            OrderScreen(service: widget.service, specialist: specialist),
       ),
-    ),
-  );
-}
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -303,16 +298,12 @@ void _orderService() {
     final serviceName = widget.service['name'] as String? ?? 'Услуга';
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(serviceName),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: Text(serviceName), centerTitle: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Карусель фото
             if (_isLoadingPhotos)
               const Center(child: CircularProgressIndicator())
             else if (photos.isNotEmpty)
@@ -331,11 +322,22 @@ void _orderService() {
                                 photo,
                                 fit: BoxFit.cover,
                                 loadingBuilder: (context, child, progress) =>
-                                    progress == null ? child : const Center(child: CircularProgressIndicator()),
-                                errorBuilder: (_, __, ___) =>
-                                    const Center(child: Icon(Icons.error, color: Colors.red, size: 50)),
+                                    progress == null
+                                    ? child
+                                    : const Center(
+                                        child: CircularProgressIndicator(),
+                                      ),
+                                errorBuilder: (_, __, ___) => const Center(
+                                  child: Icon(
+                                    Icons.error,
+                                    color: Colors.red,
+                                    size: 50,
+                                  ),
+                                ),
                               )
-                            : const Center(child: Icon(Icons.image_not_supported)),
+                            : const Center(
+                                child: Icon(Icons.image_not_supported),
+                              ),
                       ),
                     );
                   },
@@ -348,12 +350,10 @@ void _orderService() {
                 child: const Center(child: Text('Нет фотографий')),
               ),
             if (photos.isNotEmpty) const SizedBox(height: 16),
-
-            // Точки-индикаторы (активная точка меняется при скролле)
             if (photos.length > 1)
               Center(
                 child: ValueListenableBuilder<int>(
-                  valueListenable: ValueNotifier(0), // можно улучшить с PageController
+                  valueListenable: ValueNotifier(0),
                   builder: (context, activeIndex, _) {
                     return Row(
                       mainAxisSize: MainAxisSize.min,
@@ -365,7 +365,9 @@ void _orderService() {
                           height: 8,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Theme.of(context).primaryColor.withOpacity(index == activeIndex ? 1 : 0.4),
+                            color: Theme.of(context).primaryColor.withOpacity(
+                              index == activeIndex ? 1 : 0.4,
+                            ),
                           ),
                         ),
                       ),
@@ -375,13 +377,13 @@ void _orderService() {
               ),
             if (photos.isNotEmpty) const SizedBox(height: 24),
 
-            // Специалист (кликабельный)
             GestureDetector(
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => SpecialistProfileScreen(specialist: specialist),
+                    builder: (context) =>
+                        SpecialistProfileScreen(specialist: specialist),
                   ),
                 );
               },
@@ -394,8 +396,14 @@ void _orderService() {
                         : null,
                     child: specialist['photo_url'] == null
                         ? Text(
-                            (specialist['display_name'] as String?)?.substring(0, 1).toUpperCase() ?? 'М',
-                            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                            (specialist['display_name'] as String?)
+                                    ?.substring(0, 1)
+                                    .toUpperCase() ??
+                                'М',
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
                           )
                         : null,
                   ),
@@ -406,7 +414,11 @@ void _orderService() {
                       children: [
                         Text(
                           specialist['display_name'] ?? 'Мастер',
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
                         ),
                         if (specialist['specialty'] != null)
                           Text(
@@ -416,13 +428,16 @@ void _orderService() {
                       ],
                     ),
                   ),
-                  const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: Colors.grey,
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
 
-            // Название и цена
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -430,12 +445,17 @@ void _orderService() {
                 Expanded(
                   child: Text(
                     serviceName,
-                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 if (price != null)
                   Chip(
-                    backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.1),
                     label: Text(
                       '$price BYN',
                       style: TextStyle(
@@ -447,22 +467,28 @@ void _orderService() {
                   )
                 else
                   const Chip(
-                    label: Text('По договорённости', style: TextStyle(fontWeight: FontWeight.bold)),
+                    label: Text(
+                      'По договорённости',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
               ],
             ),
             const SizedBox(height: 24),
 
-            // Описание
-            const Text('Описание', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+            const Text(
+              'Описание',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 8),
             Text(
-              description?.isNotEmpty == true ? description! : 'Описание отсутствует',
+              description?.isNotEmpty == true
+                  ? description!
+                  : 'Описание отсутствует',
               style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 32),
 
-            // Кнопки действий
             Row(
               children: [
                 Expanded(
@@ -470,7 +496,9 @@ void _orderService() {
                     onPressed: _openChat,
                     icon: const Icon(Icons.chat),
                     label: const Text('Связаться'),
-                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(50),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -479,18 +507,22 @@ void _orderService() {
                     onPressed: _orderService,
                     icon: const Icon(Icons.shopping_cart),
                     label: const Text('Заказать'),
-                    style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(50),
+                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 40),
 
-            // Отзывы и рейтинг
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Отзывы', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+                const Text(
+                  'Отзывы',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                ),
                 if (!_hasUserReview)
                   TextButton(
                     onPressed: _showReviewDialog,
@@ -523,14 +555,22 @@ void _orderService() {
                   const SizedBox(width: 12),
                   Text(
                     '${_averageRating.toStringAsFixed(1)} ($_reviewCount)',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
 
               if (_reviews.isEmpty)
-                const Center(child: Text('Пока нет отзывов', style: TextStyle(color: Colors.grey)))
+                const Center(
+                  child: Text(
+                    'Пока нет отзывов',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                )
               else
                 ListView.builder(
                   shrinkWrap: true,
@@ -541,7 +581,8 @@ void _orderService() {
                     final user = review['profiles'] ?? {};
                     final rating = review['rating'] as int? ?? 0;
                     final comment = review['comment'] as String? ?? '';
-                    final date = (review['created_at'] as String?)?.split('T')[0] ?? '';
+                    final date =
+                        (review['created_at'] as String?)?.split('T')[0] ?? '';
 
                     return Card(
                       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -554,7 +595,9 @@ void _orderService() {
                               children: [
                                 Text(
                                   user['display_name'] ?? 'Аноним',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                                 const Spacer(),
                                 Row(
@@ -563,7 +606,9 @@ void _orderService() {
                                     (i) => Icon(
                                       Icons.star,
                                       size: 16,
-                                      color: i < rating ? Colors.amber : Colors.grey[400],
+                                      color: i < rating
+                                          ? Colors.amber
+                                          : Colors.grey[400],
                                     ),
                                   ),
                                 ),
@@ -576,7 +621,10 @@ void _orderService() {
                             const SizedBox(height: 8),
                             Text(
                               date,
-                              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
                             ),
                           ],
                         ),

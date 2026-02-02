@@ -1,4 +1,3 @@
-// lib/widgets/specialist/profile_tab/change_password_dialog.dart
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -32,8 +31,14 @@ class ChangePasswordDialog {
                     labelText: 'Текущий пароль',
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
-                      icon: Icon(currentVisible ? Icons.visibility : Icons.visibility_off),
-                      onPressed: () => setDialogState(() => currentVisible = !currentVisible),
+                      icon: Icon(
+                        currentVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                      ),
+                      onPressed: () => setDialogState(
+                        () => currentVisible = !currentVisible,
+                      ),
                     ),
                   ),
                 ),
@@ -45,8 +50,11 @@ class ChangePasswordDialog {
                     labelText: 'Новый пароль',
                     prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
-                      icon: Icon(newVisible ? Icons.visibility : Icons.visibility_off),
-                      onPressed: () => setDialogState(() => newVisible = !newVisible),
+                      icon: Icon(
+                        newVisible ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: () =>
+                          setDialogState(() => newVisible = !newVisible),
                     ),
                   ),
                 ),
@@ -58,8 +66,14 @@ class ChangePasswordDialog {
                     labelText: 'Подтвердите новый пароль',
                     prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
-                      icon: Icon(confirmVisible ? Icons.visibility : Icons.visibility_off),
-                      onPressed: () => setDialogState(() => confirmVisible = !confirmVisible),
+                      icon: Icon(
+                        confirmVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                      ),
+                      onPressed: () => setDialogState(
+                        () => confirmVisible = !confirmVisible,
+                      ),
                     ),
                   ),
                 ),
@@ -77,38 +91,44 @@ class ChangePasswordDialog {
                   : () async {
                       if (newPassCtrl.text != confirmPassCtrl.text) {
                         ScaffoldMessenger.of(parentContext).showSnackBar(
-                          const SnackBar(content: Text('Новые пароли не совпадают')),
+                          const SnackBar(
+                            content: Text('Новые пароли не совпадают'),
+                          ),
                         );
                         return;
                       }
                       if (newPassCtrl.text.length < 6) {
                         ScaffoldMessenger.of(parentContext).showSnackBar(
-                          const SnackBar(content: Text('Пароль должен быть ≥6 символов')),
+                          const SnackBar(
+                            content: Text('Пароль должен быть ≥6 символов'),
+                          ),
                         );
                         return;
                       }
 
                       setDialogState(() => isLoading = true);
                       try {
-                        // Reauthenticate
                         await supabase.auth.signInWithPassword(
                           email: supabase.auth.currentUser!.email!,
                           password: currentPassCtrl.text,
                         );
 
-                        // Update password
-                        await supabase.auth.updateUser(UserAttributes(password: newPassCtrl.text));
+                        await supabase.auth.updateUser(
+                          UserAttributes(password: newPassCtrl.text),
+                        );
 
                         if (dialogContext.mounted) {
                           Navigator.pop(dialogContext);
                           ScaffoldMessenger.of(parentContext).showSnackBar(
-                            const SnackBar(content: Text('Пароль успешно изменён!')),
+                            const SnackBar(
+                              content: Text('Пароль успешно изменён!'),
+                            ),
                           );
                         }
                       } on AuthException catch (e) {
-                        ScaffoldMessenger.of(parentContext).showSnackBar(
-                          SnackBar(content: Text(e.message)),
-                        );
+                        ScaffoldMessenger.of(
+                          parentContext,
+                        ).showSnackBar(SnackBar(content: Text(e.message)));
                       } finally {
                         if (dialogContext.mounted) {
                           setDialogState(() => isLoading = false);
@@ -116,7 +136,14 @@ class ChangePasswordDialog {
                       }
                     },
               child: isLoading
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
                   : const Text('Сменить'),
             ),
           ],

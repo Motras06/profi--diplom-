@@ -1,9 +1,7 @@
-// lib/screens/other/specialist_profile.dart
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../screens/other/service_chat_screen.dart';
-import '../../widgets/specialist/profile_tab/documents.dart'; // твой экран документов
-import '../../widgets/specialist/profile_tab/reviews.dart';   // твой экран отзывов
+import '../../widgets/specialist/profile_tab/documents.dart';
 
 class SpecialistProfileScreen extends StatefulWidget {
   final Map<String, dynamic> specialist;
@@ -11,7 +9,8 @@ class SpecialistProfileScreen extends StatefulWidget {
   const SpecialistProfileScreen({super.key, required this.specialist});
 
   @override
-  State<SpecialistProfileScreen> createState() => _SpecialistProfileScreenState();
+  State<SpecialistProfileScreen> createState() =>
+      _SpecialistProfileScreenState();
 }
 
 class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
@@ -59,7 +58,10 @@ class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
           .eq('specialist_id', widget.specialist['id']);
 
       final total = reviews.length;
-      final sum = reviews.fold<double>(0.0, (s, r) => s + (r['rating'] as int? ?? 0));
+      final sum = reviews.fold<double>(
+        0.0,
+        (s, r) => s + (r['rating'] as int? ?? 0),
+      );
 
       if (mounted) {
         setState(() {
@@ -89,18 +91,7 @@ class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
   void _openAllDocuments() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const SpecialistDocuments(),
-      ),
-    );
-  }
-
-  void _openAllReviews() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const SpecialistReviews(),
-      ),
+      MaterialPageRoute(builder: (context) => const SpecialistDocuments()),
     );
   }
 
@@ -110,9 +101,21 @@ class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(5, (i) {
-        if (i < full) return const Icon(Icons.star_rounded, color: Colors.amber, size: 20);
-        if (i == full && half) return const Icon(Icons.star_half_rounded, color: Colors.amber, size: 20);
-        return const Icon(Icons.star_border_rounded, color: Colors.grey, size: 20);
+        if (i < full) {
+          return const Icon(Icons.star_rounded, color: Colors.amber, size: 20);
+        }
+        if (i == full && half) {
+          return const Icon(
+            Icons.star_half_rounded,
+            color: Colors.amber,
+            size: 20,
+          );
+        }
+        return const Icon(
+          Icons.star_border_rounded,
+          color: Colors.grey,
+          size: 20,
+        );
       }),
     );
   }
@@ -146,7 +149,9 @@ class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
                     child: CircleAvatar(
                       radius: 64,
                       backgroundColor: colorScheme.primaryContainer,
-                      foregroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                      foregroundImage: photoUrl != null
+                          ? NetworkImage(photoUrl)
+                          : null,
                       child: photoUrl == null
                           ? Text(
                               name.isNotEmpty ? name[0].toUpperCase() : 'М',
@@ -162,7 +167,9 @@ class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
                   const SizedBox(height: 24),
                   Text(
                     name,
-                    style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   if (specialty != null && specialty.isNotEmpty) ...[
                     const SizedBox(height: 8),
@@ -194,7 +201,6 @@ class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
             ),
           ),
 
-          // Кнопка "Написать"
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
@@ -204,20 +210,23 @@ class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
                 label: const Text('Написать сообщение'),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(56),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
               ),
             ),
           ),
 
-          // О себе
           if (about != null && about.isNotEmpty)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Card(
                   elevation: 1,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(20),
                     child: Column(
@@ -225,7 +234,9 @@ class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
                       children: [
                         Text(
                           'О себе',
-                          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -242,7 +253,6 @@ class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
               ),
             ),
 
-          // Закреплённые документы (3 шт)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
@@ -251,7 +261,9 @@ class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
                 children: [
                   Text(
                     'Документы',
-                    style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   if (_pinnedDocuments.isNotEmpty)
                     TextButton(
@@ -264,7 +276,9 @@ class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
           ),
 
           if (_isLoadingDocs)
-            const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()))
+            const SliverToBoxAdapter(
+              child: Center(child: CircularProgressIndicator()),
+            )
           else if (_pinnedDocuments.isEmpty)
             SliverToBoxAdapter(
               child: Padding(
@@ -272,35 +286,35 @@ class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
                 child: Center(
                   child: Text(
                     'Нет загруженных документов',
-                    style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ),
             )
           else
             SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final doc = _pinnedDocuments[index];
-                  final name = doc['name'] as String? ?? 'Документ';
-                  final url = doc['file_url'] as String?;
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final doc = _pinnedDocuments[index];
+                final name = doc['name'] as String? ?? 'Документ';
 
-                  return ListTile(
-                    leading: Icon(Icons.description_rounded, color: colorScheme.primary),
-                    title: Text(name),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.download_rounded),
-                      onPressed: () {
-                        // Здесь можно добавить логику скачивания/открытия, как в SpecialistDocuments
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Скачивание: $name')),
-                        );
-                      },
-                    ),
-                  );
-                },
-                childCount: _pinnedDocuments.length.clamp(0, 3),
-              ),
+                return ListTile(
+                  leading: Icon(
+                    Icons.description_rounded,
+                    color: colorScheme.primary,
+                  ),
+                  title: Text(name),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.download_rounded),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Скачивание: $name')),
+                      );
+                    },
+                  ),
+                );
+              }, childCount: _pinnedDocuments.length.clamp(0, 3)),
             ),
           const SliverToBoxAdapter(child: SizedBox(height: 40)),
         ],

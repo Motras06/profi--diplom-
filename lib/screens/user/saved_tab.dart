@@ -1,4 +1,3 @@
-// lib/screens/user/saved_tab.dart
 import 'package:flutter/material.dart';
 import '../../services/saved_service_service.dart';
 import '../../widgets/user/saved_tab/saved_tab_search_bar.dart';
@@ -14,10 +13,8 @@ class SavedTab extends StatefulWidget {
 }
 
 class _SavedTabState extends State<SavedTab> with TickerProviderStateMixin {
-  // ← Добавили TickerProvider для AnimatedList
   final SavedServiceService _service = SavedServiceService();
-  final GlobalKey<AnimatedListState> _listKey =
-      GlobalKey<AnimatedListState>(); // ← Ключ для AnimatedList
+  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
 
   @override
   void initState() {
@@ -28,7 +25,7 @@ class _SavedTabState extends State<SavedTab> with TickerProviderStateMixin {
 
   void _onChange() {
     if (mounted) {
-      setState(() {}); // ← Для перестройки при загрузке/фильтрах
+      setState(() {});
     }
   }
 
@@ -36,21 +33,12 @@ class _SavedTabState extends State<SavedTab> with TickerProviderStateMixin {
     final serviceId = service['id'];
     if (serviceId == null) return;
 
-    // Анимированное удаление
     _listKey.currentState?.removeItem(
       index,
-      (context, animation) => _buildAnimatedItem(
-        context,
-        service,
-        animation,
-        isRemoving: true,
-      ), // ← Анимированный placeholder
-      duration: const Duration(
-        milliseconds: 400,
-      ), // ← Длительность анимации удаления
+      (context, animation) =>
+          _buildAnimatedItem(context, service, animation, isRemoving: true),
+      duration: const Duration(milliseconds: 400),
     );
-
-    // Удаляем из сервиса (асинхронно, если нужно)
     _service.removeFromSaved(serviceId);
   }
 
@@ -61,19 +49,15 @@ class _SavedTabState extends State<SavedTab> with TickerProviderStateMixin {
     bool isRemoving = false,
   }) {
     return SizeTransition(
-      // ← Fade + slide анимация
       sizeFactor: animation,
       child: FadeTransition(
         opacity: animation,
         child: isRemoving
-            ? SavedServiceCard(
-                service: service,
-                onRemove: () {},
-              ) // Placeholder без onRemove
+            ? SavedServiceCard(service: service, onRemove: () {})
             : SavedServiceCard(
                 service: service,
-                onRemove: () => _removeItem(/* current index */ 0, service),
-              ), // Замените 0 на реальный index
+                onRemove: () => _removeItem(0, service),
+              ),
       ),
     );
   }
@@ -147,7 +131,6 @@ class _SavedTabState extends State<SavedTab> with TickerProviderStateMixin {
               onFilterPressed: _openFilters,
             ),
 
-            // lib/screens/user/saved_tab.dart  — только изменённая часть Expanded
             Expanded(
               child: _service.isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -160,8 +143,7 @@ class _SavedTabState extends State<SavedTab> with TickerProviderStateMixin {
                       ),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
-                        childAspectRatio:
-                            childAspectRatio, // ← ваши старые пропорции
+                        childAspectRatio: childAspectRatio,
                         crossAxisSpacing: crossSpacing,
                         mainAxisSpacing: mainSpacing,
                       ),
@@ -178,7 +160,6 @@ class _SavedTabState extends State<SavedTab> with TickerProviderStateMixin {
                         return SavedServiceCard(
                           service: service,
                           onRemove: () {
-                            // Простое удаление без await и без ScaleTransition внутри карточки
                             _service.removeFromSaved(serviceId);
                           },
                         );

@@ -1,4 +1,3 @@
-// lib/screens/other/chat_screen.dart (или lib/screens/specialist/chat_screen.dart)
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:profi/screens/other/specialist_profile.dart';
@@ -122,7 +121,6 @@ class _ServiceChatScreenState extends State<ServiceChatScreen>
         });
         _scrollToBottom(animate: false);
 
-        // ← Вот это главное исправление
         if (_messages.isNotEmpty) {
           _animController.forward(from: 0.0);
         }
@@ -223,7 +221,6 @@ class _ServiceChatScreenState extends State<ServiceChatScreen>
               Navigator.pop(context);
             },
           ),
-          // Можно добавить позже: "Ответить", "Удалить" (если своё), "Пожаловаться" и т.д.
           const SizedBox(height: 16),
         ],
       ),
@@ -242,7 +239,7 @@ class _ServiceChatScreenState extends State<ServiceChatScreen>
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
-        centerTitle: false, // ← важно, чтобы Row занимал место слева
+        centerTitle: false,
         backgroundColor: colorScheme.surfaceContainerLow,
         foregroundColor: colorScheme.onSurface,
         elevation: 0,
@@ -256,7 +253,6 @@ class _ServiceChatScreenState extends State<ServiceChatScreen>
           ),
         ),
         title: InkWell(
-          // ← здесь добавляем кликабельность
           onTap: () {
             Navigator.push(
               context,
@@ -414,7 +410,6 @@ class _ServiceChatScreenState extends State<ServiceChatScreen>
                   ),
                 ),
 
-                // Поле ввода — M3 Filled + круглая кнопка
                 Container(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                   decoration: BoxDecoration(

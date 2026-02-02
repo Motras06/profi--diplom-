@@ -1,4 +1,3 @@
-// lib/widgets/specialist/profile_tab/edit_profile_form.dart
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -7,7 +6,13 @@ import 'package:image_picker/image_picker.dart';
 import '../../../services/supabase_service.dart';
 import 'change_password_dialog.dart';
 
-typedef OnProfileSaved = Future<void> Function(String name, String? about, String? specialty, String? photoUrl);
+typedef OnProfileSaved =
+    Future<void> Function(
+      String name,
+      String? about,
+      String? specialty,
+      String? photoUrl,
+    );
 
 class EditProfileForm extends StatefulWidget {
   final String initialName;
@@ -31,7 +36,8 @@ class EditProfileForm extends StatefulWidget {
   State<EditProfileForm> createState() => _EditProfileFormState();
 }
 
-class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProviderStateMixin {
+class _EditProfileFormState extends State<EditProfileForm>
+    with SingleTickerProviderStateMixin {
   late TextEditingController _nameController;
   late TextEditingController _aboutController;
   late TextEditingController _specialtyController;
@@ -53,17 +59,22 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
 
     _nameController = TextEditingController(text: widget.initialName);
     _aboutController = TextEditingController(text: widget.initialAbout ?? '');
-    _specialtyController = TextEditingController(text: widget.initialSpecialty ?? '');
+    _specialtyController = TextEditingController(
+      text: widget.initialSpecialty ?? '',
+    );
 
     _fadeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 480),
     );
-    _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic);
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.25),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic));
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOutCubic,
+    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.25), end: Offset.zero).animate(
+          CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic),
+        );
 
     Future.delayed(const Duration(milliseconds: 200), () {
       if (mounted) _fadeController.forward();
@@ -80,7 +91,11 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
   }
 
   Future<void> _pickAndCompressPhoto() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery, maxWidth: 1200, imageQuality: 85);
+    final picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1200,
+      imageQuality: 85,
+    );
     if (picked == null) return;
 
     final originalFile = File(picked.path);
@@ -108,7 +123,9 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
       quality -= 10;
     }
 
-    final tempFile = File('${Directory.systemTemp.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg');
+    final tempFile = File(
+      '${Directory.systemTemp.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg',
+    );
     await tempFile.writeAsBytes(bytes);
     return tempFile;
   }
@@ -117,7 +134,8 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
     if (_newPhotoFile == null) return widget.initialPhotoUrl;
 
     try {
-      final fileName = '$userId/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final fileName =
+          '$userId/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
       await supabase.storage.from('profile').upload(fileName, _newPhotoFile!);
       return supabase.storage.from('profile').getPublicUrl(fileName);
     } catch (e) {
@@ -128,9 +146,9 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
 
   Future<void> _save() async {
     if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Имя не может быть пустым')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Имя не может быть пустым')));
       return;
     }
 
@@ -144,15 +162,19 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
 
       await widget.onSave(
         _nameController.text.trim(),
-        _aboutController.text.trim().isEmpty ? null : _aboutController.text.trim(),
-        _specialtyController.text.trim().isEmpty ? null : _specialtyController.text.trim(),
+        _aboutController.text.trim().isEmpty
+            ? null
+            : _aboutController.text.trim(),
+        _specialtyController.text.trim().isEmpty
+            ? null
+            : _specialtyController.text.trim(),
         newPhotoUrl,
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка сохранения: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка сохранения: $e')));
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -185,14 +207,15 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
               child: Card(
                 elevation: 16,
                 shadowColor: colorScheme.shadow.withOpacity(0.30),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
                 color: colorScheme.surfaceContainerLow,
                 child: Padding(
                   padding: const EdgeInsets.all(32),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Аватар
                       Center(
                         child: GestureDetector(
                           onTap: _pickAndCompressPhoto,
@@ -204,11 +227,18 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
                                 backgroundColor: colorScheme.primaryContainer,
                                 foregroundImage: _newPhotoFile != null
                                     ? FileImage(_newPhotoFile!)
-                                    : (widget.initialPhotoUrl != null ? NetworkImage(widget.initialPhotoUrl!) : null),
-                                child: (_newPhotoFile == null && widget.initialPhotoUrl == null)
+                                    : (widget.initialPhotoUrl != null
+                                          ? NetworkImage(
+                                              widget.initialPhotoUrl!,
+                                            )
+                                          : null),
+                                child:
+                                    (_newPhotoFile == null &&
+                                        widget.initialPhotoUrl == null)
                                     ? Text(
                                         _nameController.text.isNotEmpty
-                                            ? _nameController.text[0].toUpperCase()
+                                            ? _nameController.text[0]
+                                                  .toUpperCase()
                                             : 'М',
                                         style: TextStyle(
                                           fontSize: 64,
@@ -221,7 +251,11 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
                               CircleAvatar(
                                 radius: 24,
                                 backgroundColor: colorScheme.primary,
-                                child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 24),
+                                child: const Icon(
+                                  Icons.camera_alt_rounded,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
                               ),
                             ],
                           ),
@@ -229,7 +263,6 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
                       ),
                       const SizedBox(height: 40),
 
-                      // Поля ввода
                       TextField(
                         controller: _nameController,
                         decoration: InputDecoration(
@@ -278,7 +311,6 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
                       ),
                       const SizedBox(height: 32),
 
-                      // Сменить пароль
                       OutlinedButton.icon(
                         onPressed: () => ChangePasswordDialog.show(context),
                         icon: const Icon(Icons.key_rounded),
@@ -286,7 +318,9 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
                         style: OutlinedButton.styleFrom(
                           foregroundColor: colorScheme.primary,
                           side: BorderSide(color: colorScheme.outline),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           elevation: 2,
                           shadowColor: colorScheme.shadow.withOpacity(0.18),
@@ -294,7 +328,6 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
                       ),
                       const SizedBox(height: 40),
 
-                      // Кнопки действий
                       Row(
                         children: [
                           Expanded(
@@ -304,10 +337,16 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: colorScheme.onSurfaceVariant,
                                 side: BorderSide(color: colorScheme.outline),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
                                 elevation: 2,
-                                shadowColor: colorScheme.shadow.withOpacity(0.18),
+                                shadowColor: colorScheme.shadow.withOpacity(
+                                  0.18,
+                                ),
                               ),
                             ),
                           ),
@@ -315,6 +354,20 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
                           Expanded(
                             child: FilledButton(
                               onPressed: _isSaving ? null : _save,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: colorScheme.primary,
+                                foregroundColor: colorScheme.onPrimary,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                elevation: 4,
+                                shadowColor: colorScheme.primary.withOpacity(
+                                  0.4,
+                                ),
+                              ),
                               child: _isSaving
                                   ? SizedBox(
                                       height: 20,
@@ -325,14 +378,6 @@ class _EditProfileFormState extends State<EditProfileForm> with SingleTickerProv
                                       ),
                                     )
                                   : const Text('Сохранить'),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: colorScheme.primary,
-                                foregroundColor: colorScheme.onPrimary,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                elevation: 4,
-                                shadowColor: colorScheme.primary.withOpacity(0.4),
-                              ),
                             ),
                           ),
                         ],

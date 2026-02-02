@@ -1,4 +1,3 @@
-// lib/screens/admin/tabs/specialists_tab.dart
 import 'package:flutter/material.dart';
 import 'package:profi/services/supabase_service.dart';
 
@@ -35,15 +34,14 @@ class _SpecialistsTabState extends State<SpecialistsTab> {
     } catch (e) {
       setState(() => _loading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
 
   Future<void> _blockSpecialist(String id) async {
-    // Можно просто поменять роль на 'blocked' или создать запись в blacklists
     try {
       await supabase.from('profiles').update({'role': 'blocked'}).eq('id', id);
       if (mounted) {
@@ -54,9 +52,9 @@ class _SpecialistsTabState extends State<SpecialistsTab> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Не удалось заблокировать: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Не удалось заблокировать: $e')));
       }
     }
   }
@@ -84,15 +82,24 @@ class _SpecialistsTabState extends State<SpecialistsTab> {
                 backgroundImage: sp['photo_url'] != null
                     ? NetworkImage(sp['photo_url'])
                     : null,
-                child: sp['photo_url'] == null ? const Icon(Icons.person) : null,
+                child: sp['photo_url'] == null
+                    ? const Icon(Icons.person)
+                    : null,
               ),
               title: Text(sp['display_name'] ?? 'Без имени'),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(sp['specialty'] ?? '—', style: const TextStyle(color: Colors.blueGrey)),
                   Text(
-                    sp['about']?.substring(0, sp['about']?.length > 60 ? 60 : null) ?? '',
+                    sp['specialty'] ?? '—',
+                    style: const TextStyle(color: Colors.blueGrey),
+                  ),
+                  Text(
+                    sp['about']?.substring(
+                          0,
+                          sp['about']?.length > 60 ? 60 : null,
+                        ) ??
+                        '',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 12),
@@ -104,9 +111,7 @@ class _SpecialistsTabState extends State<SpecialistsTab> {
                 onPressed: () => _blockSpecialist(sp['id']),
                 tooltip: 'Заблокировать',
               ),
-              onTap: () {
-                // → Детальная страница специалиста: услуги, документы, отзывы, чаты и т.д.
-              },
+              onTap: () {},
             ),
           );
         },

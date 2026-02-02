@@ -1,4 +1,3 @@
-// lib/screens/other/my_orders_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -15,7 +14,8 @@ class MyOrdersScreen extends StatefulWidget {
   State<MyOrdersScreen> createState() => _MyOrdersScreenState();
 }
 
-class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProviderStateMixin {
+class _MyOrdersScreenState extends State<MyOrdersScreen>
+    with SingleTickerProviderStateMixin {
   final supabase = Supabase.instance.client;
 
   List<Map<String, dynamic>> _myOrders = [];
@@ -39,11 +39,14 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
       vsync: this,
       duration: const Duration(milliseconds: 480),
     );
-    _fadeAnimation = CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic);
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.25),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic));
+    _fadeAnimation = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOutCubic,
+    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.25), end: Offset.zero).animate(
+          CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+        );
 
     _loadMyOrders();
   }
@@ -75,9 +78,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
     }
 
     try {
-      var query = supabase
-          .from('orders')
-          .select('''
+      var query = supabase.from('orders').select('''
             id, status, created_at, contract_details,
             services (id, name),
             profiles!specialist_id (id, display_name, photo_url)
@@ -132,9 +133,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
       case 'pending':
         return Colors.orangeAccent;
       case 'accepted':
-        return colorScheme.secondary; // accent зелёный
+        return colorScheme.secondary;
       case 'in_progress':
-        return colorScheme.primary; // аквамарин
+        return colorScheme.primary;
       case 'completed':
         return Colors.tealAccent.shade700;
       case 'cancelled':
@@ -146,12 +147,18 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
 
   IconData _getStatusIcon(String? status) {
     switch (status) {
-      case 'pending': return Icons.hourglass_bottom_rounded;
-      case 'accepted': return Icons.check_circle_rounded;
-      case 'in_progress': return Icons.autorenew_rounded;
-      case 'completed': return Icons.task_alt_rounded;
-      case 'cancelled': return Icons.cancel_rounded;
-      default: return Icons.help_rounded;
+      case 'pending':
+        return Icons.hourglass_bottom_rounded;
+      case 'accepted':
+        return Icons.check_circle_rounded;
+      case 'in_progress':
+        return Icons.autorenew_rounded;
+      case 'completed':
+        return Icons.task_alt_rounded;
+      case 'cancelled':
+        return Icons.cancel_rounded;
+      default:
+        return Icons.help_rounded;
     }
   }
 
@@ -164,7 +171,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
       'completed': 'Завершён',
       'cancelled': 'Отменён',
     };
-    return map[status] ?? status[0].toUpperCase() + status.substring(1).replaceAll('_', ' ');
+    return map[status] ??
+        status[0].toUpperCase() + status.substring(1).replaceAll('_', ' ');
   }
 
   Future<void> _generateOrderPdf(Map<String, dynamic> order) async {
@@ -178,42 +186,36 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
     final date = DateTime.parse(order['created_at'] as String).toLocal();
     final formattedDate = DateFormat('dd MMM yyyy HH:mm', 'ru').format(date);
 
-    // Заголовок
     page.graphics.drawString(
       'Детали заказа #${order['id']}',
       PdfStandardFont(PdfFontFamily.helvetica, 18),
       bounds: const Rect.fromLTWH(0, 0, 500, 50),
     );
 
-    // Информация о специалисте
     page.graphics.drawString(
       'Исполнитель: ${specialist['display_name'] ?? 'Не указан'}',
       PdfStandardFont(PdfFontFamily.helvetica, 12),
       bounds: const Rect.fromLTWH(0, 60, 500, 20),
     );
 
-    // Услуга и цена
     page.graphics.drawString(
       'Услуга: ${service['name'] ?? 'Не указана'}',
       PdfStandardFont(PdfFontFamily.helvetica, 12),
       bounds: const Rect.fromLTWH(0, 90, 500, 20),
     );
 
-    // Цена
     page.graphics.drawString(
       'Цена: ${service['price'] ?? 'По договорённости'} BYN',
       PdfStandardFont(PdfFontFamily.helvetica, 12),
       bounds: const Rect.fromLTWH(0, 110, 500, 20),
     );
 
-    // Дата создания
     page.graphics.drawString(
       'Дата создания: $formattedDate',
       PdfStandardFont(PdfFontFamily.helvetica, 12),
       bounds: const Rect.fromLTWH(0, 140, 500, 20),
     );
 
-    // Контракт детали
     page.graphics.drawString(
       'Детали контракта:',
       PdfStandardFont(PdfFontFamily.helvetica, 14),
@@ -230,14 +232,12 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
       y += 20;
     });
 
-    // Статус
     page.graphics.drawString(
       'Статус: ${_formatStatus(order['status'])}',
       PdfStandardFont(PdfFontFamily.helvetica, 12),
       bounds: Rect.fromLTWH(0, y + 20, 500, 20),
     );
 
-    // Сохранение PDF
     final bytes = await pdf.save();
     pdf.dispose();
 
@@ -279,7 +279,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
               const PopupMenuItem(value: 'all', child: Text('Все заказы')),
               const PopupMenuItem(value: 'pending', child: Text('Ожидает')),
               const PopupMenuItem(value: 'accepted', child: Text('Принят')),
-              const PopupMenuItem(value: 'in_progress', child: Text('В работе')),
+              const PopupMenuItem(
+                value: 'in_progress',
+                child: Text('В работе'),
+              ),
               const PopupMenuItem(value: 'completed', child: Text('Завершён')),
               const PopupMenuItem(value: 'cancelled', child: Text('Отменён')),
             ],
@@ -292,212 +295,250 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _myOrders.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.receipt_long_outlined,
-                          size: 88,
-                          color: colorScheme.onSurfaceVariant.withOpacity(0.4),
-                        ),
-                        const SizedBox(height: 32),
-                        Text(
-                          'У вас пока нет заказов',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Создайте первый заказ на главной странице',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 40),
-                        FilledButton.icon(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.arrow_back_rounded),
-                          label: const Text('Вернуться назад'),
-                        ),
-                      ],
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.receipt_long_outlined,
+                      size: 88,
+                      color: colorScheme.onSurfaceVariant.withOpacity(0.4),
                     ),
-                  )
-                : FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: SlideTransition(
-                      position: _slideAnimation,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _myOrders.length + (_hasMore ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == _myOrders.length) {
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 24),
-                              child: _isLoadingMore
-                                  ? const Center(child: CircularProgressIndicator())
-                                  : OutlinedButton(
-                                      onPressed: () => _loadMyOrders(loadMore: true),
-                                      child: const Text('Загрузить ещё'),
-                                    ),
-                            );
-                          }
+                    const SizedBox(height: 32),
+                    Text(
+                      'У вас пока нет заказов',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Создайте первый заказ на главной странице',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 40),
+                    FilledButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      label: const Text('Вернуться назад'),
+                    ),
+                  ],
+                ),
+              )
+            : FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _myOrders.length + (_hasMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == _myOrders.length) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          child: _isLoadingMore
+                              ? const Center(child: CircularProgressIndicator())
+                              : OutlinedButton(
+                                  onPressed: () =>
+                                      _loadMyOrders(loadMore: true),
+                                  child: const Text('Загрузить ещё'),
+                                ),
+                        );
+                      }
 
-                          final order = _myOrders[index];
-                          final service = order['services'] as Map? ?? {};
-                          final specialist = order['profiles'] as Map? ?? {};
-                          final status = order['status'] as String?;
-                          final date = DateTime.parse(order['created_at'] as String).toLocal();
-                          final formattedDate = DateFormat('dd MMM yyyy HH:mm', 'ru').format(date);
-                          final details = order['contract_details'] as Map? ?? {};
+                      final order = _myOrders[index];
+                      final details = order['contract_details'] as Map? ?? {};
 
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            elevation: 1,
-                            shadowColor: Colors.black.withOpacity(0.12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                            color: colorScheme.surfaceContainerLowest,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(20),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => OrderDetailScreen(order: order),
-                                  ),
-                                ).then((_) => _loadMyOrders());
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
+                      final status = order['status'] as String? ?? 'unknown';
+                      final createdAtRaw = order['created_at'] as String?;
+                      String formattedDate = '—';
+                      if (createdAtRaw != null && createdAtRaw.isNotEmpty) {
+                        try {
+                          final date = DateTime.parse(createdAtRaw).toLocal();
+                          formattedDate = DateFormat(
+                            'dd MMM yyyy HH:mm',
+                            'ru',
+                          ).format(date);
+                        } catch (_) {}
+                      }
+
+                      final serviceName =
+                          (order['services'] as Map? ?? {})['name']
+                              as String? ??
+                          'Услуга не указана';
+                      final specialistName =
+                          (order['profiles'] as Map? ?? {})['display_name']
+                              as String? ??
+                          'Мастер';
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        elevation: 1,
+                        shadowColor: Colors.black.withOpacity(0.12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        color: colorScheme.surfaceContainerLowest,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => OrderDetailScreen(order: order),
+                              ),
+                            ).then((_) => _loadMyOrders());
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        CircleAvatar(
-                                          radius: 24,
-                                          backgroundColor: colorScheme.primaryContainer,
-                                          foregroundImage: specialist['photo_url'] != null
-                                              ? NetworkImage(specialist['photo_url'])
-                                              : null,
-                                          child: specialist['photo_url'] == null
-                                              ? Text(
-                                                  (specialist['display_name'] as String?)?.substring(0, 1).toUpperCase() ?? '?',
-                                                  style: TextStyle(
-                                                    color: colorScheme.onPrimaryContainer,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                )
-                                              : null,
+                                    CircleAvatar(
+                                      radius: 24,
+                                      backgroundColor:
+                                          colorScheme.primaryContainer,
+                                      child: Text(
+                                        specialistName.isNotEmpty
+                                            ? specialistName[0].toUpperCase()
+                                            : '?',
+                                        style: TextStyle(
+                                          color: colorScheme.onPrimaryContainer,
                                         ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                service['name'] ?? 'Услуга не указана',
-                                                style: theme.textTheme.titleMedium?.copyWith(
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            serviceName,
+                                            style: theme.textTheme.titleMedium
+                                                ?.copyWith(
                                                   fontWeight: FontWeight.w600,
                                                 ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                specialist['display_name'] ?? 'Исполнитель',
-                                                style: theme.textTheme.bodyMedium?.copyWith(
-                                                  color: colorScheme.onSurfaceVariant,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            specialistName,
+                                            style: theme.textTheme.bodyMedium
+                                                ?.copyWith(
+                                                  color: colorScheme
+                                                      .onSurfaceVariant,
                                                 ),
-                                              ),
-                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Column(
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () => _generateOrderPdf(order),
+                                          child: Icon(
+                                            Icons.picture_as_pdf_rounded,
+                                            color: colorScheme.primary,
+                                            size: 28,
                                           ),
                                         ),
-                                        Column(
-                                          children: [
-                                            GestureDetector(
-                                              onTap: () => _generateOrderPdf(order),
-                                              child: Icon(
-                                                Icons.picture_as_pdf_rounded,
-                                                color: colorScheme.primary,
-                                                size: 28,
-                                              ),
+                                        const SizedBox(height: 8),
+                                        Chip(
+                                          label: Text(
+                                            _formatStatus(status),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
                                             ),
-                                            const SizedBox(height: 8),
-                                            Chip(
-                                              label: Text(
-                                                _formatStatus(status),
-                                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                                              ),
-                                              avatar: Icon(
-                                                _getStatusIcon(status),
-                                                size: 16,
-                                                color: _getStatusColor(status, colorScheme),
-                                              ),
-                                              backgroundColor: _getStatusColor(status, colorScheme).withOpacity(0.12),
-                                              side: BorderSide.none,
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                              padding: const EdgeInsets.symmetric(horizontal: 4),
-                                              visualDensity: VisualDensity.compact,
+                                          ),
+                                          avatar: Icon(
+                                            _getStatusIcon(status),
+                                            size: 16,
+                                            color: _getStatusColor(
+                                              status,
+                                              colorScheme,
                                             ),
-                                          ],
+                                          ),
+                                          backgroundColor: _getStatusColor(
+                                            status,
+                                            colorScheme,
+                                          ).withOpacity(0.12),
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 16),
-                                    if (details.isNotEmpty) ...[
-                                      Row(
-                                        children: [
-                                          Icon(Icons.location_on_outlined, size: 16, color: colorScheme.onSurfaceVariant),
-                                          const SizedBox(width: 6),
-                                          Expanded(
-                                            child: Text(
-                                              'Адрес: ${details['address'] ?? 'не указан'}',
-                                              style: theme.textTheme.bodyMedium,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          Icon(Icons.calendar_today_outlined, size: 16, color: colorScheme.onSurfaceVariant),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            'Дата: ${details['preferred_date'] ?? '—'} ${details['preferred_time'] ?? ''}',
-                                            style: theme.textTheme.bodyMedium,
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          Icon(Icons.timer_outlined, size: 16, color: colorScheme.onSurfaceVariant),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            'Продолжительность: ${details['duration'] ?? 'не указана'}',
-                                            style: theme.textTheme.bodyMedium,
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'Создан: $formattedDate',
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        color: colorScheme.onSurfaceVariant,
-                                      ),
-                                    ),
                                   ],
                                 ),
-                              ),
+                                const SizedBox(height: 16),
+                                if (details.isNotEmpty) ...[
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.location_on_outlined,
+                                        size: 16,
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          'Адрес: ${details['address'] ?? 'не указан'}',
+                                          style: theme.textTheme.bodyMedium,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.calendar_today_outlined,
+                                        size: 16,
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Дата: ${details['preferred_date'] ?? '—'} ${details['preferred_time'] ?? ''}',
+                                        style: theme.textTheme.bodyMedium,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.timer_outlined,
+                                        size: 16,
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Продолжительность: ${details['duration'] ?? 'не указана'}',
+                                        style: theme.textTheme.bodyMedium,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Создан: $formattedDate',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
                             ),
-                          );
-                        },
-                      ),
-                    ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
+                ),
+              ),
       ),
     );
   }

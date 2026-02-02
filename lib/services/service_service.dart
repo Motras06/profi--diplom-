@@ -15,7 +15,6 @@ class ServiceService extends ChangeNotifier {
   double? _minPrice;
   double? _maxPrice;
 
-  // ← Вот это поле отсутствовало
   final List<String> _availableSpecialties = [
     'Сантехника',
     'Электрика',
@@ -39,7 +38,6 @@ class ServiceService extends ChangeNotifier {
 
   final Set<String> _selectedSpecialties = {};
 
-  // Геттеры
   String get sortBy => _sortBy;
   double? get minPrice => _minPrice;
   double? get maxPrice => _maxPrice;
@@ -79,7 +77,9 @@ class ServiceService extends ChangeNotifier {
             .order('order', ascending: true)
             .limit(1);
 
-        service['main_photo'] = photos.isNotEmpty ? photos.first['photo_url'] : null;
+        service['main_photo'] = photos.isNotEmpty
+            ? photos.first['photo_url']
+            : null;
       }
 
       if (userId != null) {
@@ -108,39 +108,53 @@ class ServiceService extends ChangeNotifier {
     List<Map<String, dynamic>> result = _allServices.where((service) {
       final name = (service['name'] as String?)?.toLowerCase() ?? '';
       final desc = (service['description'] as String?)?.toLowerCase() ?? '';
-      final master = (service['profiles']?['display_name'] as String?)?.toLowerCase() ?? '';
-      final specialty = (service['profiles']?['specialty'] as String?)?.toLowerCase() ?? '';
+      final master =
+          (service['profiles']?['display_name'] as String?)?.toLowerCase() ??
+          '';
+      final specialty =
+          (service['profiles']?['specialty'] as String?)?.toLowerCase() ?? '';
 
-      final matchesSearch = name.contains(query) ||
+      final matchesSearch =
+          name.contains(query) ||
           desc.contains(query) ||
           master.contains(query) ||
           specialty.contains(query);
 
-      final matchesSpecialty = _selectedSpecialties.isEmpty ||
+      final matchesSpecialty =
+          _selectedSpecialties.isEmpty ||
           _selectedSpecialties.contains(service['profiles']?['specialty']);
 
       final price = service['price'] as num?;
-      final matchesPrice = (price == null) ||
+      final matchesPrice =
+          (price == null) ||
           (_minPrice == null || price >= _minPrice!) &&
               (_maxPrice == null || price <= _maxPrice!);
 
       return matchesSearch && matchesSpecialty && matchesPrice;
     }).toList();
 
-    // Сортировка
     switch (_sortBy) {
       case 'price_asc':
-        result.sort((a, b) => (a['price'] as num? ?? 0).compareTo(b['price'] as num? ?? 0));
+        result.sort(
+          (a, b) =>
+              (a['price'] as num? ?? 0).compareTo(b['price'] as num? ?? 0),
+        );
         break;
       case 'price_desc':
-        result.sort((a, b) => (b['price'] as num? ?? 0).compareTo(a['price'] as num? ?? 0));
+        result.sort(
+          (a, b) =>
+              (b['price'] as num? ?? 0).compareTo(a['price'] as num? ?? 0),
+        );
         break;
       case 'rating_desc':
-        // TODO: если добавите рейтинг
         break;
       case 'newest':
       default:
-        result.sort((a, b) => DateTime.parse(b['created_at']).compareTo(DateTime.parse(a['created_at'])));
+        result.sort(
+          (a, b) => DateTime.parse(
+            b['created_at'],
+          ).compareTo(DateTime.parse(a['created_at'])),
+        );
     }
 
     _filteredServices = result;
@@ -155,21 +169,24 @@ class ServiceService extends ChangeNotifier {
 
     try {
       if (_savedServiceIds.contains(serviceId)) {
-        await supabase.from('saved_services').delete().eq('user_id', userId).eq('service_id', serviceId);
+        await supabase
+            .from('saved_services')
+            .delete()
+            .eq('user_id', userId)
+            .eq('service_id', serviceId);
         _savedServiceIds.remove(serviceId);
       } else {
-        await supabase.from('saved_services').insert({'user_id': userId, 'service_id': serviceId});
+        await supabase.from('saved_services').insert({
+          'user_id': userId,
+          'service_id': serviceId,
+        });
         _savedServiceIds.add(serviceId);
       }
       notifyListeners();
-    } catch (e) {
-      // обработка ошибки
-    }
+    } catch (e) {}
   }
 
-  void reportService() {
-    // заглушка
-  }
+  void reportService() {}
 
   void updateSort(String sort) {
     _sortBy = sort;

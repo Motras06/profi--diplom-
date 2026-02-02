@@ -1,4 +1,3 @@
-// lib/widgets/user/profile_tab/profile_stat_card.dart
 import 'package:flutter/material.dart';
 
 class ProfileStatCard extends StatelessWidget {
@@ -19,11 +18,16 @@ class ProfileStatCard extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: 28,
-          backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+          backgroundColor: Theme.of(
+            context,
+          ).colorScheme.primary.withOpacity(0.1),
           child: Icon(icon, color: Theme.of(context).colorScheme.primary),
         ),
         const SizedBox(height: 8),
-        Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
         Text(
           label,
           style: TextStyle(color: Colors.grey.shade600, fontSize: 13),

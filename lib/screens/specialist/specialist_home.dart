@@ -1,4 +1,3 @@
-// lib/screens/specialist/specialist_home.dart
 import 'package:flutter/material.dart';
 import 'package:profi/screens/specialist/services_tab.dart';
 import 'package:profi/screens/specialist/chat_tab.dart';
@@ -39,7 +38,6 @@ class _SpecialistHomeState extends State<SpecialistHome> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // Цвет панели — с surface tint для глубины
     final navBarColor = ElevationOverlay.applySurfaceTint(
       colorScheme.surface,
       colorScheme.surfaceTint,
@@ -48,7 +46,7 @@ class _SpecialistHomeState extends State<SpecialistHome> {
 
     return Scaffold(
       backgroundColor: colorScheme.background,
-      extendBody: true, // чтобы контент шёл под панель
+      extendBody: true,
 
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 350),
@@ -62,7 +60,6 @@ class _SpecialistHomeState extends State<SpecialistHome> {
         ),
       ),
 
-      // Нижняя панель с большой тенью и закруглением
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -70,14 +67,12 @@ class _SpecialistHomeState extends State<SpecialistHome> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(32),
               boxShadow: [
-                // Главная большая тень
                 BoxShadow(
                   color: colorScheme.shadow.withOpacity(0.24),
                   blurRadius: 32,
                   spreadRadius: 8,
                   offset: const Offset(0, 12),
                 ),
-                // Вспомогательная тень для объёма
                 BoxShadow(
                   color: colorScheme.shadow.withOpacity(0.12),
                   blurRadius: 16,

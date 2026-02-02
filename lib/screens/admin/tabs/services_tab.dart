@@ -1,4 +1,3 @@
-// lib/screens/admin/tabs/services_tab.dart
 import 'package:flutter/material.dart';
 import 'package:profi/services/supabase_service.dart';
 
@@ -43,15 +42,15 @@ class _ServicesTabState extends State<ServicesTab> {
       await supabase.from('service_photos').delete().eq('service_id', id);
       _loadServices();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Услуга удалена')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Услуга удалена')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка удаления: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка удаления: $e')));
       }
     }
   }
@@ -80,20 +79,32 @@ class _ServicesTabState extends State<ServicesTab> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(s['description'] ?? '', style: const TextStyle(fontSize: 13)),
+                      Text(
+                        s['description'] ?? '',
+                        style: const TextStyle(fontSize: 13),
+                      ),
                       const SizedBox(height: 12),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           OutlinedButton.icon(
-                            icon: const Icon(Icons.delete_forever, size: 18, color: Colors.red),
-                            label: const Text('Удалить', style: TextStyle(color: Colors.red)),
+                            icon: const Icon(
+                              Icons.delete_forever,
+                              size: 18,
+                              color: Colors.red,
+                            ),
+                            label: const Text(
+                              'Удалить',
+                              style: TextStyle(color: Colors.red),
+                            ),
                             onPressed: () {
                               showDialog(
                                 context: context,
                                 builder: (ctx) => AlertDialog(
                                   title: const Text('Удалить услугу?'),
-                                  content: Text('Будет удалена услуга «${s['name']}»'),
+                                  content: Text(
+                                    'Будет удалена услуга «${s['name']}»',
+                                  ),
                                   actions: [
                                     TextButton(
                                       onPressed: () => Navigator.pop(ctx),
@@ -104,7 +115,10 @@ class _ServicesTabState extends State<ServicesTab> {
                                         Navigator.pop(ctx);
                                         _deleteService(s['id']);
                                       },
-                                      child: const Text('Удалить', style: TextStyle(color: Colors.red)),
+                                      child: const Text(
+                                        'Удалить',
+                                        style: TextStyle(color: Colors.red),
+                                      ),
                                     ),
                                   ],
                                 ),

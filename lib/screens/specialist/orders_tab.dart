@@ -1,6 +1,4 @@
-// lib/screens/specialist/orders_tab.dart
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
 
 enum OrdersViewMode { verification, accepted, completed, blacklist }
@@ -12,7 +10,8 @@ class OrdersTab extends StatefulWidget {
   State<OrdersTab> createState() => _OrdersTabState();
 }
 
-class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMixin {
+class _OrdersTabState extends State<OrdersTab>
+    with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -33,7 +32,10 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
       vsync: this,
       duration: const Duration(milliseconds: 480),
     );
-    _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic);
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOutCubic,
+    );
 
     _specialistId = supabase.auth.currentUser?.id;
     if (_specialistId != null) {
@@ -57,7 +59,6 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
 
     try {
       final results = await Future.wait([
-        // Верификация (pending)
         supabase
             .from('orders')
             .select('''
@@ -69,7 +70,6 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
             .eq('status', 'pending')
             .order('created_at', ascending: false),
 
-        // Одобренные (accepted)
         supabase
             .from('orders')
             .select('''
@@ -81,7 +81,6 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
             .eq('status', 'accepted')
             .order('created_at', ascending: false),
 
-        // Выполненные (completed)
         supabase
             .from('orders')
             .select('''
@@ -93,7 +92,6 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
             .eq('status', 'completed')
             .order('created_at', ascending: false),
 
-        // Чёрный список
         supabase
             .from('blacklists')
             .select('''
@@ -117,27 +115,30 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
       debugPrint('Ошибка загрузки заказов: $e');
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка загрузки: $e')));
       }
     }
   }
 
   Future<void> _acceptOrder(int orderId) async {
     try {
-      await supabase.from('orders').update({'status': 'accepted'}).eq('id', orderId);
+      await supabase
+          .from('orders')
+          .update({'status': 'accepted'})
+          .eq('id', orderId);
       await _loadData();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Заказ принят')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Заказ принят')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
@@ -147,12 +148,19 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Отклонить заказ?'),
-        content: const Text('Заказ будет удалён без возможности восстановления.'),
+        content: const Text(
+          'Заказ будет удалён без возможности восстановления.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
             child: const Text('Отклонить'),
           ),
         ],
@@ -171,34 +179,40 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
 
   Future<void> _completeOrder(int orderId) async {
     try {
-      await supabase.from('orders').update({'status': 'completed'}).eq('id', orderId);
+      await supabase
+          .from('orders')
+          .update({'status': 'completed'})
+          .eq('id', orderId);
       await _loadData();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Заказ завершён')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Заказ завершён')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
 
   Future<void> _removeFromBlacklist(String blacklistedUserId) async {
     try {
-      await supabase.from('blacklists').delete().eq('blacklisted_user_id', blacklistedUserId);
+      await supabase
+          .from('blacklists')
+          .delete()
+          .eq('blacklisted_user_id', blacklistedUserId);
       await _loadData();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -207,9 +221,9 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
   }
@@ -231,7 +245,10 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       color: Theme.of(context).colorScheme.surfaceContainerLowest,
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
         leading: CircleAvatar(
           radius: 28,
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
@@ -239,13 +256,17 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
           child: photoUrl == null
               ? Text(
                   displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
                 )
               : null,
         ),
         title: Text(
           displayName,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -254,7 +275,10 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
             if (price != null) Text('Цена: $price ₽'),
             Text(
               'Создан: ${createdAt.day}.${createdAt.month}.${createdAt.year} ${createdAt.hour}:${createdAt.minute.toString().padLeft(2, '0')}',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 12,
+              ),
             ),
           ],
         ),
@@ -263,24 +287,37 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: Icon(Icons.check_circle_rounded, color: Theme.of(context).colorScheme.primary),
+                    icon: Icon(
+                      Icons.check_circle_rounded,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                     onPressed: () => _acceptOrder(order['id'] as int),
                     tooltip: 'Принять',
                   ),
                   IconButton(
-                    icon: Icon(Icons.cancel_rounded, color: Theme.of(context).colorScheme.error),
+                    icon: Icon(
+                      Icons.cancel_rounded,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                     onPressed: () => _rejectOrder(order['id'] as int),
                     tooltip: 'Отклонить',
                   ),
                 ],
               )
             : mode == OrdersViewMode.accepted
-                ? IconButton(
-                    icon: Icon(Icons.done_all_rounded, color: Theme.of(context).colorScheme.primary),
-                    onPressed: () => _completeOrder(order['id'] as int),
-                    tooltip: 'Завершить',
-                  )
-                : Icon(Icons.check_circle_rounded, color: Theme.of(context).colorScheme.primary, size: 32),
+            ? IconButton(
+                icon: Icon(
+                  Icons.done_all_rounded,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                onPressed: () => _completeOrder(order['id'] as int),
+                tooltip: 'Завершить',
+              )
+            : Icon(
+                Icons.check_circle_rounded,
+                color: Theme.of(context).colorScheme.primary,
+                size: 32,
+              ),
       ),
     );
   }
@@ -298,7 +335,10 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       color: Theme.of(context).colorScheme.surfaceContainerLowest,
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
         leading: CircleAvatar(
           radius: 28,
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
@@ -306,21 +346,31 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
           child: photoUrl == null
               ? Text(
                   displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
                 )
               : null,
         ),
         title: Text(
           displayName,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
           reason != null ? 'Причина: $reason' : 'Причина не указана',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         trailing: IconButton(
-          icon: Icon(Icons.remove_circle_rounded, color: Theme.of(context).colorScheme.error),
-          onPressed: () => _removeFromBlacklist(entry['blacklisted_user_id'] as String),
+          icon: Icon(
+            Icons.remove_circle_rounded,
+            color: Theme.of(context).colorScheme.error,
+          ),
+          onPressed: () =>
+              _removeFromBlacklist(entry['blacklisted_user_id'] as String),
           tooltip: 'Удалить из чёрного списка',
         ),
       ),
@@ -335,19 +385,23 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
           Icon(
             Icons.hourglass_empty_rounded,
             size: 88,
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.4),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withOpacity(0.4),
           ),
           const SizedBox(height: 32),
           Text(
             message,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
           Text(
             'Когда появятся заказы — они отобразятся здесь',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -371,15 +425,21 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
 
     switch (_selectedIndex) {
       case 0:
-        currentList = _pendingOrders.map((o) => _buildOrderCard(o, OrdersViewMode.verification)).toList();
+        currentList = _pendingOrders
+            .map((o) => _buildOrderCard(o, OrdersViewMode.verification))
+            .toList();
         emptyText = 'Нет заказов на верификацию';
         break;
       case 1:
-        currentList = _acceptedOrders.map((o) => _buildOrderCard(o, OrdersViewMode.accepted)).toList();
+        currentList = _acceptedOrders
+            .map((o) => _buildOrderCard(o, OrdersViewMode.accepted))
+            .toList();
         emptyText = 'Нет одобренных заказов';
         break;
       case 2:
-        currentList = _completedOrders.map((o) => _buildOrderCard(o, OrdersViewMode.completed)).toList();
+        currentList = _completedOrders
+            .map((o) => _buildOrderCard(o, OrdersViewMode.completed))
+            .toList();
         emptyText = 'Нет выполненных заказов';
         break;
       case 3:
@@ -392,7 +452,7 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
       backgroundColor: colorScheme.background,
       extendBody: true,
       appBar: AppBar(
-        title: Text('Заказы', style: TextStyle(color: colorScheme.onSurface),),
+        title: Text('Заказы', style: TextStyle(color: colorScheme.onSurface)),
         centerTitle: true,
         backgroundColor: colorScheme.surfaceContainerLow,
         foregroundColor: colorScheme.onSurface,
@@ -412,15 +472,15 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : currentList.isEmpty
-                ? _buildEmptyState(emptyText)
-                : RefreshIndicator.adaptive(
-                    onRefresh: _loadData,
-                    color: colorScheme.primary,
-                    child: ListView(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      children: currentList,
-                    ),
-                  ),
+            ? _buildEmptyState(emptyText)
+            : RefreshIndicator.adaptive(
+                onRefresh: _loadData,
+                color: colorScheme.primary,
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  children: currentList,
+                ),
+              ),
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
@@ -449,7 +509,8 @@ class _OrdersTabState extends State<OrdersTab> with SingleTickerProviderStateMix
               borderRadius: BorderRadius.circular(32),
               clipBehavior: Clip.antiAlias,
               child: NavigationBar(
-                onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+                onDestinationSelected: (index) =>
+                    setState(() => _selectedIndex = index),
                 selectedIndex: _selectedIndex,
                 backgroundColor: Colors.transparent,
                 indicatorColor: colorScheme.primary.withOpacity(0.22),

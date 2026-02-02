@@ -1,4 +1,3 @@
-// lib/widgets/user/profile_tab/profile_stats_row.dart
 import 'package:flutter/material.dart';
 import 'package:profi/models/profile_stats.dart';
 import 'package:profi/widgets/user/profile_tab/profile_stat_card.dart';
@@ -7,11 +6,7 @@ class ProfileStatsRow extends StatelessWidget {
   final ProfileStats stats;
   final String? role;
 
-  const ProfileStatsRow({
-    super.key,
-    required this.stats,
-    this.role,
-  });
+  const ProfileStatsRow({super.key, required this.stats, this.role});
 
   @override
   Widget build(BuildContext context) {

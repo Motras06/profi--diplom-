@@ -19,7 +19,6 @@ class MainTabSearchBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
       child: Row(
         children: [
-          /// 🔍 Search field
           Expanded(
             child: Container(
               decoration: BoxDecoration(
@@ -39,7 +38,6 @@ class MainTabSearchBar extends StatelessWidget {
                   hintText: 'Поиск услуг или мастеров',
                   prefixIcon: const Icon(Icons.search),
 
-                  /// ❗ ключевой момент
                   border: OutlineInputBorder(
                     borderRadius: radius,
                     borderSide: BorderSide.none,
@@ -55,8 +53,7 @@ class MainTabSearchBar extends StatelessWidget {
 
                   filled: true,
                   fillColor: Colors.transparent,
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
 
                   suffixIcon: controller.text.isNotEmpty
                       ? IconButton(
@@ -71,7 +68,6 @@ class MainTabSearchBar extends StatelessWidget {
 
           const SizedBox(width: 10),
 
-          /// 🎛 Filter button
           Container(
             decoration: BoxDecoration(
               borderRadius: radius,
@@ -90,9 +86,7 @@ class MainTabSearchBar extends StatelessWidget {
               style: IconButton.styleFrom(
                 backgroundColor: theme.colorScheme.surfaceVariant,
                 padding: const EdgeInsets.all(14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: radius,
-                ),
+                shape: RoundedRectangleBorder(borderRadius: radius),
               ),
             ),
           ),

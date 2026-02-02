@@ -1,4 +1,3 @@
-// lib/screens/auth/login_tab.dart
 import 'package:flutter/material.dart';
 import 'package:profi/screens/admin/admin_home.dart';
 import 'package:profi/screens/specialist/specialist_home.dart';
@@ -13,7 +12,8 @@ class LoginTab extends StatefulWidget {
   State<LoginTab> createState() => _LoginTabState();
 }
 
-class _LoginTabState extends State<LoginTab> with SingleTickerProviderStateMixin {
+class _LoginTabState extends State<LoginTab>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -30,21 +30,21 @@ class _LoginTabState extends State<LoginTab> with SingleTickerProviderStateMixin
 
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900), // синхронизировал с register_tab
+      duration: const Duration(milliseconds: 900),
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0.0, 0.20), // тот же slide, что в register
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, 0.20), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
-    // Запуск анимации с той же задержкой, что в register_tab
     Future.delayed(const Duration(milliseconds: 400), () {
       if (mounted) _animationController.forward();
     });
@@ -81,7 +81,9 @@ class _LoginTabState extends State<LoginTab> with SingleTickerProviderStateMixin
             content: Text(e.message),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -136,20 +138,24 @@ class _LoginTabState extends State<LoginTab> with SingleTickerProviderStateMixin
 
       if (!mounted) return;
 
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => destination),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => destination));
     } catch (e, stackTrace) {
       debugPrint('Ошибка при определении роли:\n$e\n$stackTrace');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Не удалось загрузить данные профиля. Вход как обычный пользователь.'),
+            content: const Text(
+              'Не удалось загрузить данные профиля. Вход как обычный пользователь.',
+            ),
             duration: const Duration(seconds: 4),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
 
@@ -182,9 +188,8 @@ class _LoginTabState extends State<LoginTab> with SingleTickerProviderStateMixin
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 16), // унифицировал с register_tab
+                const SizedBox(height: 16),
 
-                // Поле Email — точно такой же стиль, как в register
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -207,7 +212,6 @@ class _LoginTabState extends State<LoginTab> with SingleTickerProviderStateMixin
 
                 const SizedBox(height: 20),
 
-                // Поле Пароль — идентичный стиль
                 TextFormField(
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
@@ -223,11 +227,15 @@ class _LoginTabState extends State<LoginTab> with SingleTickerProviderStateMixin
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                        _isPasswordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                         color: colorScheme.onSurfaceVariant,
                       ),
                       onPressed: () {
-                        setState(() => _isPasswordVisible = !_isPasswordVisible);
+                        setState(
+                          () => _isPasswordVisible = !_isPasswordVisible,
+                        );
                       },
                     ),
                     border: OutlineInputBorder(
@@ -237,9 +245,7 @@ class _LoginTabState extends State<LoginTab> with SingleTickerProviderStateMixin
                   ),
                 ),
 
-                const SizedBox(height: 40), // больше воздуха перед кнопкой, как в register
-
-                // Кнопка Войти — теперь FilledButton.icon, как в register
+                const SizedBox(height: 40),
                 FilledButton.icon(
                   onPressed: _isLoading ? null : _loginAndNavigate,
                   icon: _isLoading
@@ -257,9 +263,13 @@ class _LoginTabState extends State<LoginTab> with SingleTickerProviderStateMixin
                       : const Text('Войти'),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(56),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     elevation: 0,
-                    textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+                    textStyle: textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
 

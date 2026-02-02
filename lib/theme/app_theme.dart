@@ -1,27 +1,18 @@
-// lib/theme/app_theme.dart
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // Аквамариновая палитра — свежая, современная и энергичная
-  // Primary: #00BFA5 — яркий аквамарин, символизирует чистоту, доверие и профессионализм
-  // Primary Dark: #009688 — глубокий бирюзовый для акцентов
-  // Primary Light: #4DD0E1 — светлый и воздушный для выделений
-  // Accent: #66BB6A — мягкий зелёный для позитивных действий (можно заменить на #26A69A)
-  static const Color primary = Color(0xFF00BFA5); // Основной аквамарин
-  static const Color primaryDark = Color(0xFF009688); // Тёмный бирюзовый
-  static const Color primaryLight = Color(0xFF4DD0E1); // Светлый аквамарин
-  static const Color accent = Color(
-    0xFF66BB6A,
-  ); // Зелёный акцент (успех, "нанять")
+  static const Color primary = Color(0xFF00BFA5);
+  static const Color primaryDark = Color(0xFF009688);
+  static const Color primaryLight = Color(0xFF4DD0E1);
+  static const Color accent = Color(0xFF66BB6A);
   static const Color divider = Color(0xFFE0E0E0);
   static const Color error = Color(0xFFE53935);
 
-  // Светлая тема
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
     primaryColor: primary,
-    scaffoldBackgroundColor: const Color(0xFFFAFAFC), // мягкий off-white
+    scaffoldBackgroundColor: const Color(0xFFFAFAFC),
     colorScheme: ColorScheme.light(
       primary: primary,
       secondary: accent,
@@ -31,11 +22,10 @@ class AppTheme {
       onSecondary: Colors.white,
       onBackground: const Color(0xFF212121),
       onSurface: const Color(0xFF212121),
-      surfaceVariant: const Color(0xFFE0F2F1), // лёгкий намёк на аквамарин
+      surfaceVariant: const Color(0xFFE0F2F1),
       outline: divider,
       error: error,
 
-      // Контейнеры для иерархии
       surfaceContainerLowest: const Color(0xFFFFFFFF),
       surfaceContainerLow: const Color.fromARGB(255, 224, 235, 235),
       surfaceContainer: const Color(0xFFECFAF8),
@@ -91,7 +81,7 @@ class AppTheme {
 
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xFFF0FCFA), // лёгкий аквамариновый намёк
+      fillColor: const Color(0xFFF0FCFA),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
@@ -137,20 +127,17 @@ class AppTheme {
     dividerColor: divider,
   );
 
-  // Тёмная тема — адаптирована под аквамарин
   static ThemeData darkTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
     primaryColor: primary,
-    scaffoldBackgroundColor: const Color(
-      0xFF0D1B1A,
-    ), // глубокий тёмно-бирюзовый фон
+    scaffoldBackgroundColor: const Color(0xFF0D1B1A),
     colorScheme: ColorScheme.dark(
-      primary: primaryLight, // светлый аквамарин для контраста
+      primary: primaryLight,
       secondary: accent,
       surface: const Color(0xFF1A2A29),
       background: const Color(0xFF0D1B1A),
-      onPrimary: Colors.black87, // тёмный текст на светлом primary
+      onPrimary: Colors.black87,
       onSecondary: Colors.black87,
       onBackground: Colors.white,
       onSurface: Colors.white,

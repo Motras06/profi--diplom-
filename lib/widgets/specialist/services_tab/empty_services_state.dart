@@ -1,4 +1,3 @@
-// lib/widgets/specialist/services_tab/empty_services_state.dart
 import 'package:flutter/material.dart';
 
 class EmptyServicesState extends StatefulWidget {
@@ -8,7 +7,8 @@ class EmptyServicesState extends StatefulWidget {
   State<EmptyServicesState> createState() => _EmptyServicesStateState();
 }
 
-class _EmptyServicesStateState extends State<EmptyServicesState> with SingleTickerProviderStateMixin {
+class _EmptyServicesStateState extends State<EmptyServicesState>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fade;
   late Animation<Offset> _slide;
@@ -16,13 +16,18 @@ class _EmptyServicesStateState extends State<EmptyServicesState> with SingleTick
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
-    _fade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
     );
-    _slide = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
+    _fade = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
     Future.delayed(const Duration(milliseconds: 200), () {
       if (mounted) _controller.forward();
@@ -55,16 +60,16 @@ class _EmptyServicesStateState extends State<EmptyServicesState> with SingleTick
               const SizedBox(height: 32),
               Text(
                 'У вас пока нет услуг',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 12),
               Text(
                 'Добавьте первую услугу, чтобы клиенты могли вас найти',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                  color: colorScheme.onSurfaceVariant,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],

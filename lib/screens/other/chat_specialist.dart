@@ -1,4 +1,3 @@
-// lib/screens/specialist/chat_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:profi/screens/other/specialist_profile.dart';
@@ -73,7 +72,9 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
     if (_currentUserId == null || _clientId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ошибка: не удалось определить участников чата')),
+          const SnackBar(
+            content: Text('Ошибка: не удалось определить участников чата'),
+          ),
         );
       }
       return;
@@ -91,7 +92,6 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
           table: 'chat_messages',
           callback: (payload) {
             final newMsg = payload.newRecord;
-            if (newMsg == null) return;
 
             final sender = newMsg['sender_id'] as String?;
             final receiver = newMsg['receiver_id'] as String?;
@@ -188,14 +188,19 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
               controller: reasonCtrl,
               decoration: InputDecoration(
                 labelText: 'Причина (обязательно)',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               maxLines: 3,
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
           TextButton(
             onPressed: () {
               if (reasonCtrl.text.trim().isEmpty) {
@@ -206,7 +211,9 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
               }
               Navigator.pop(ctx, true);
             },
-            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
             child: const Text('Добавить'),
           ),
         ],
@@ -225,13 +232,18 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
       if (mounted) {
         setState(() => _isUserBlacklisted = true);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Пользователь добавлен в чёрный список')),
+          const SnackBar(
+            content: Text('Пользователь добавлен в чёрный список'),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e'), backgroundColor: Theme.of(context).colorScheme.error),
+          SnackBar(
+            content: Text('Ошибка: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
         );
       }
     }
@@ -253,9 +265,9 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
       _messageController.clear();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Не удалось отправить: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Не удалось отправить: $e')));
       }
     }
   }
@@ -294,7 +306,9 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
           content: const Text('Сообщение скопировано'),
           duration: const Duration(milliseconds: 1500),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     }
@@ -313,7 +327,9 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Text(
               'Действия с сообщением',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
           ListTile(
@@ -375,11 +391,17 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
                 CircleAvatar(
                   radius: 20,
                   backgroundColor: colorScheme.primaryContainer,
-                  foregroundImage: widget.clientPhoto != null ? NetworkImage(widget.clientPhoto!) : null,
+                  foregroundImage: widget.clientPhoto != null
+                      ? NetworkImage(widget.clientPhoto!)
+                      : null,
                   child: widget.clientPhoto == null
                       ? Text(
-                          widget.clientName.isNotEmpty ? widget.clientName[0].toUpperCase() : '?',
-                          style: TextStyle(color: colorScheme.onPrimaryContainer),
+                          widget.clientName.isNotEmpty
+                              ? widget.clientName[0].toUpperCase()
+                              : '?',
+                          style: TextStyle(
+                            color: colorScheme.onPrimaryContainer,
+                          ),
                         )
                       : null,
                 ),
@@ -390,7 +412,9 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
                     children: [
                       Text(
                         widget.clientName,
-                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                       if (widget.isOnline)
@@ -444,13 +468,17 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
                           padding: const EdgeInsets.only(bottom: 8),
                           child: GestureDetector(
                             onLongPress: () {
-                              if (text.isNotEmpty) _showMessageContextMenu(text);
+                              if (text.isNotEmpty)
+                                _showMessageContextMenu(text);
                             },
                             child: Align(
-                              alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                              alignment: isMe
+                                  ? Alignment.centerRight
+                                  : Alignment.centerLeft,
                               child: ConstrainedBox(
                                 constraints: BoxConstraints(
-                                  maxWidth: MediaQuery.of(context).size.width * 0.75,
+                                  maxWidth:
+                                      MediaQuery.of(context).size.width * 0.75,
                                 ),
                                 child: Material(
                                   elevation: isMe ? 1 : 0.5,
@@ -465,27 +493,37 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
                                     bottomRight: Radius.circular(isMe ? 4 : 20),
                                   ),
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
                                     child: Column(
-                                      crossAxisAlignment:
-                                          isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                                      crossAxisAlignment: isMe
+                                          ? CrossAxisAlignment.end
+                                          : CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           text,
-                                          style: theme.textTheme.bodyMedium?.copyWith(
-                                            color: isMe
-                                                ? colorScheme.onPrimaryContainer
-                                                : colorScheme.onSurface,
-                                          ),
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                color: isMe
+                                                    ? colorScheme
+                                                          .onPrimaryContainer
+                                                    : colorScheme.onSurface,
+                                              ),
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
                                           time,
-                                          style: theme.textTheme.bodySmall?.copyWith(
-                                            color: isMe
-                                                ? colorScheme.onPrimaryContainer.withOpacity(0.7)
-                                                : colorScheme.onSurfaceVariant,
-                                          ),
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                                color: isMe
+                                                    ? colorScheme
+                                                          .onPrimaryContainer
+                                                          .withOpacity(0.7)
+                                                    : colorScheme
+                                                          .onSurfaceVariant,
+                                              ),
                                         ),
                                       ],
                                     ),
@@ -500,13 +538,15 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
                   ),
                 ),
 
-                // Поле ввода в стиле M3
                 Container(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                   decoration: BoxDecoration(
                     color: colorScheme.surface,
                     border: Border(
-                      top: BorderSide(color: colorScheme.outlineVariant, width: 1),
+                      top: BorderSide(
+                        color: colorScheme.outlineVariant,
+                        width: 1,
+                      ),
                     ),
                   ),
                   child: Row(
@@ -522,14 +562,19 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
                             hintText: _isUserBlacklisted
                                 ? 'Пользователь в чёрном списке'
                                 : 'Напишите сообщение...',
-                            hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                            hintStyle: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
                             filled: true,
                             fillColor: colorScheme.surfaceContainerHighest,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(24),
                               borderSide: BorderSide.none,
                             ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 14,
+                            ),
                           ),
                           enabled: !_isUserBlacklisted,
                           onSubmitted: (_) => _sendMessage(),
