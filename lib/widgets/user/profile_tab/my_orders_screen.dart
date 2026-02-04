@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
@@ -25,7 +26,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
   final int _limit = 20;
   bool _hasMore = true;
 
-  String? _filterStatus; // null = все
+  String? _filterStatus;
   DateTime? _filterDateFrom;
 
   late AnimationController _animController;
@@ -176,82 +177,244 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
   }
 
   Future<void> _generateOrderPdf(Map<String, dynamic> order) async {
-    final pdf = PdfDocument();
-    final page = pdf.pages.add();
+    
+    try {
+      await initializeDateFormatting('ru');
+      final pdf = PdfDocument();
 
-    final service = order['services'] as Map? ?? {};
-    final specialist = order['profiles'] as Map? ?? {};
-    final details = order['contract_details'] as Map? ?? {};
+      // Правильно задаём размер страницы для всего документа
+      pdf.pageSettings.size = PdfPageSize.a4;
+      pdf.pageSettings.margins.all = 40;
+      pdf.pageSettings.orientation = PdfPageOrientation.portrait;
 
-    final date = DateTime.parse(order['created_at'] as String).toLocal();
-    final formattedDate = DateFormat('dd MMM yyyy HH:mm', 'ru').format(date);
-
-    page.graphics.drawString(
-      'Детали заказа #${order['id']}',
-      PdfStandardFont(PdfFontFamily.helvetica, 18),
-      bounds: const Rect.fromLTWH(0, 0, 500, 50),
-    );
-
-    page.graphics.drawString(
-      'Исполнитель: ${specialist['display_name'] ?? 'Не указан'}',
-      PdfStandardFont(PdfFontFamily.helvetica, 12),
-      bounds: const Rect.fromLTWH(0, 60, 500, 20),
-    );
-
-    page.graphics.drawString(
-      'Услуга: ${service['name'] ?? 'Не указана'}',
-      PdfStandardFont(PdfFontFamily.helvetica, 12),
-      bounds: const Rect.fromLTWH(0, 90, 500, 20),
-    );
-
-    page.graphics.drawString(
-      'Цена: ${service['price'] ?? 'По договорённости'} BYN',
-      PdfStandardFont(PdfFontFamily.helvetica, 12),
-      bounds: const Rect.fromLTWH(0, 110, 500, 20),
-    );
-
-    page.graphics.drawString(
-      'Дата создания: $formattedDate',
-      PdfStandardFont(PdfFontFamily.helvetica, 12),
-      bounds: const Rect.fromLTWH(0, 140, 500, 20),
-    );
-
-    page.graphics.drawString(
-      'Детали контракта:',
-      PdfStandardFont(PdfFontFamily.helvetica, 14),
-      bounds: const Rect.fromLTWH(0, 170, 500, 30),
-    );
-
-    double y = 200;
-    details.forEach((key, value) {
-      page.graphics.drawString(
-        '${key.toUpperCase()}: $value',
-        PdfStandardFont(PdfFontFamily.helvetica, 12),
-        bounds: Rect.fromLTWH(0, y, 500, 20),
+      // Шрифт DejaVuSans
+      final fontData = await DefaultAssetBundle.of(
+        context,
+      ).load('assets/fonts/DejaVuSans.ttf');
+      final ttf = PdfTrueTypeFont(fontData.buffer.asUint8List(), 12);
+      final boldFont = PdfTrueTypeFont(
+        fontData.buffer.asUint8List(),
+        14,
+        style: PdfFontStyle.bold,
       );
-      y += 20;
-    });
 
-    page.graphics.drawString(
-      'Статус: ${_formatStatus(order['status'])}',
-      PdfStandardFont(PdfFontFamily.helvetica, 12),
-      bounds: Rect.fromLTWH(0, y + 20, 500, 20),
-    );
+      final page = pdf.pages.add();
+      final pageGraphics = page.graphics;
 
-    final bytes = await pdf.save();
-    pdf.dispose();
+      final service = order['services'] as Map? ?? {};
+      final specialist = order['profiles'] as Map? ?? {};
+      final details = order['contract_details'] as Map? ?? {};
 
-    final directory = await getTemporaryDirectory();
-    final filePath = '${directory.path}/order_${order['id']}.pdf';
-    final file = File(filePath);
-    await file.writeAsBytes(bytes);
+      final date = DateTime.parse(order['created_at'] as String).toLocal();
+      final formattedDate = DateFormat(
+        'dd MMMM yyyy, HH:mm',
+        'ru',
+      ).format(date);
 
-    final openResult = await OpenFilex.open(filePath);
-    if (openResult.type != ResultType.done) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка открытия PDF: ${openResult.message}')),
+      double y = page.getClientSize().height - 80; // правильный отступ сверху
+
+      // Заголовок
+      pageGraphics.drawString(
+        'Заказ №${order['id']}',
+        boldFont,
+        brush: PdfSolidBrush(PdfColor(0, 102, 204)),
+        bounds: Rect.fromLTWH(0, y, page.getClientSize().width, 40),
+        format: PdfStringFormat(alignment: PdfTextAlignment.center),
       );
+      y -= 60;
+
+      // Дата создания
+      pageGraphics.drawString(
+        'Создан: $formattedDate',
+        ttf,
+        brush: PdfSolidBrush(PdfColor(100, 100, 100)),
+        bounds: Rect.fromLTWH(40, y, page.getClientSize().width - 80, 25),
+      );
+      y -= 45;
+
+      // Статус
+      final statusText = _formatStatus(order['status']);
+      final statusColor = _getStatusColor(
+        order['status'],
+        Theme.of(context).colorScheme,
+      );
+      final statusBrush = PdfSolidBrush(
+        PdfColor(
+          statusColor.red * 255,
+          statusColor.green * 255,
+          statusColor.blue * 255,
+        ),
+      );
+
+      pageGraphics.drawString(
+        'Статус: $statusText',
+        boldFont,
+        brush: statusBrush,
+        bounds: Rect.fromLTWH(40, y, page.getClientSize().width - 80, 30),
+      );
+      y -= 50;
+
+      // Разделитель
+      pageGraphics.drawRectangle(
+        brush: PdfSolidBrush(PdfColor(220, 220, 220)),
+        bounds: Rect.fromLTWH(40, y, page.getClientSize().width - 80, 1),
+      );
+      y -= 40;
+
+      // Основная информация
+      _drawLabelValue(
+        pageGraphics,
+        ttf,
+        boldFont,
+        'Услуга',
+        service['name'] ?? '—',
+        40,
+        y,
+        page.getClientSize().width,
+      );
+      y -= 35;
+      _drawLabelValue(
+        pageGraphics,
+        ttf,
+        boldFont,
+        'Исполнитель',
+        specialist['display_name'] ?? '—',
+        40,
+        y,
+        page.getClientSize().width,
+      );
+      y -= 35;
+      _drawLabelValue(
+        pageGraphics,
+        ttf,
+        boldFont,
+        'Цена',
+        service['price'] != null
+            ? '${service['price']} BYN'
+            : 'По договорённости',
+        40,
+        y,
+        page.getClientSize().width,
+      );
+      y -= 50;
+
+      // Детали заказа
+      if (details.isNotEmpty) {
+        pageGraphics.drawString(
+          'Детали заказа',
+          boldFont,
+          brush: PdfSolidBrush(PdfColor(0, 0, 0)),
+          bounds: Rect.fromLTWH(40, y, page.getClientSize().width - 80, 30),
+        );
+        y -= 40;
+
+        details.forEach((key, value) {
+          final niceKey = key
+              .toString()
+              .replaceAll('_', ' ')
+              .split(' ')
+              .map((w) => w[0].toUpperCase() + w.substring(1))
+              .join(' ');
+
+          _drawLabelValue(
+            pageGraphics,
+            ttf,
+            boldFont,
+            niceKey,
+            value?.toString() ?? '—',
+            40,
+            y,
+            page.getClientSize().width,
+          );
+          y -= 35;
+        });
+      }
+
+      // Нижний колонтитул
+      pageGraphics.drawString(
+        'Сгенерировано в приложении ProWirkSearch • ${DateFormat('dd.MM.yyyy HH:mm').format(DateTime.now())}',
+        ttf,
+        brush: PdfSolidBrush(PdfColor(140, 140, 140)),
+        bounds: Rect.fromLTWH(40, 40, page.getClientSize().width - 80, 20),
+        format: PdfStringFormat(alignment: PdfTextAlignment.center),
+      );
+
+      final bytes = await pdf.save();
+      pdf.dispose();
+
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/order_${order['id']}.pdf';
+      final file = File(filePath);
+      await file.writeAsBytes(bytes);
+
+      debugPrint('PDF сохранён: $filePath');
+
+      final result = await OpenFilex.open(
+        filePath,
+        type: 'application/pdf',
+        uti: 'com.adobe.pdf',
+      );
+
+      debugPrint(
+        'OpenFilex result: ${result.type}, message: ${result.message}',
+      );
+
+      if (result.type != ResultType.done && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Не удалось открыть PDF: ${result.message ?? "Нет приложения для просмотра PDF"}',
+            ),
+            duration: const Duration(seconds: 6),
+            action: SnackBarAction(label: 'OK', onPressed: () {}),
+          ),
+        );
+      }
+    } catch (e, stack) {
+      debugPrint('PDF generation/open error: $e\n$stack');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка при работе с PDF: $e'),
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      }
     }
+  }
+
+  void _drawLabelValue(
+    PdfGraphics graphics,
+    PdfFont regularFont,
+    PdfFont boldFont,
+    String label,
+    String value,
+    double x,
+    double y,
+    double pageWidth, // ← добавляем параметр ширины страницы
+  ) {
+    graphics.drawString(
+      '$label:',
+      boldFont,
+      brush: PdfSolidBrush(PdfColor(50, 50, 50)),
+      bounds: Rect.fromLTWH(x, y, 200, 30),
+    );
+
+    graphics.drawString(
+      value,
+      regularFont,
+      brush: PdfSolidBrush(PdfColor(30, 30, 30)),
+      bounds: Rect.fromLTWH(
+        x + 210,
+        y,
+        pageWidth - x - 250,
+        120,
+      ), // высота увеличена под переносы
+      format: PdfStringFormat(
+        lineSpacing: 4,
+        wordWrap: PdfWordWrapType.word, // ← правильное имя
+      ),
+    );
   }
 
   @override
@@ -438,39 +601,41 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
                                         ],
                                       ),
                                     ),
-                                    Column(
-                                      children: [
-                                        GestureDetector(
-                                          onTap: () => _generateOrderPdf(order),
-                                          child: Icon(
-                                            Icons.picture_as_pdf_rounded,
-                                            color: colorScheme.primary,
-                                            size: 28,
-                                          ),
+                                    IconButton(
+                                      onPressed: () => _generateOrderPdf(order),
+                                      icon: const Icon(
+                                        Icons.picture_as_pdf_rounded,
+                                        size: 32,
+                                      ),
+                                      tooltip: 'Открыть PDF заказа',
+                                      color: colorScheme.primary,
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: colorScheme.primary
+                                            .withOpacity(0.1),
+                                        padding: const EdgeInsets.all(12),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Chip(
+                                      label: Text(
+                                        _formatStatus(status),
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
                                         ),
-                                        const SizedBox(height: 8),
-                                        Chip(
-                                          label: Text(
-                                            _formatStatus(status),
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          avatar: Icon(
-                                            _getStatusIcon(status),
-                                            size: 16,
-                                            color: _getStatusColor(
-                                              status,
-                                              colorScheme,
-                                            ),
-                                          ),
-                                          backgroundColor: _getStatusColor(
-                                            status,
-                                            colorScheme,
-                                          ).withOpacity(0.12),
+                                      ),
+                                      avatar: Icon(
+                                        _getStatusIcon(status),
+                                        size: 16,
+                                        color: _getStatusColor(
+                                          status,
+                                          colorScheme,
                                         ),
-                                      ],
+                                      ),
+                                      backgroundColor: _getStatusColor(
+                                        status,
+                                        colorScheme,
+                                      ).withOpacity(0.12),
                                     ),
                                   ],
                                 ),

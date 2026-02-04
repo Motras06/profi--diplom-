@@ -34,6 +34,7 @@ class ServiceService extends ChangeNotifier {
     'Сад / Огород',
     'Ветеринар',
     'Психология / Коучинг',
+    'Другое',
   ];
 
   final Set<String> _selectedSpecialties = {};
@@ -184,6 +185,140 @@ class ServiceService extends ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {}
+  }
+
+  String? _specialistFilterId;
+
+  void setSpecialistFilter(String? specialistId) {
+    _specialistFilterId = specialistId;
+    // Можно сразу вызвать _applyFilters(), если данные уже загружены
+    _applyFilters();
+    notifyListeners();
+  }
+
+  // Самое важное — изменить loadServices, чтобы фильтровать на сервере
+  Future<void> loadServices2() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final userId = supabase.auth.currentUser?.id;
+
+      // Самый простой запрос — без фильтров и присваиваний
+      final response = await supabase
+          .from('services')
+          .select('''
+          id, name, description, price, created_at,
+          profiles!specialist_id (id, display_name, photo_url, specialty, about)
+        ''')
+          .order('created_at', ascending: false);
+
+      final List<Map<String, dynamic>> services = List.from(response);
+
+      // Загрузка главной фотографии
+      for (var service in services) {
+        final photos = await supabase
+            .from('service_photos')
+            .select('photo_url')
+            .eq('service_id', service['id'])
+            .order('order', ascending: true)
+            .limit(1);
+
+        service['main_photo'] = photos.isNotEmpty
+            ? photos.first['photo_url']
+            : null;
+      }
+
+      // Сохранённые услуги
+      if (userId != null) {
+        final saved = await supabase
+            .from('saved_services')
+            .select('service_id')
+            .eq('user_id', userId);
+
+        _savedServiceIds = saved.map((e) => e['service_id'] as int).toSet();
+      }
+
+      _allServices = services;
+      _filteredServices = List.from(services);
+
+      // Применяем все фильтры, включая специалиста
+      _applyFiltersWithSpecialist();
+    } catch (e, stack) {
+      _allServices = [];
+      _filteredServices = [];
+      debugPrint('Ошибка загрузки услуг: $e\n$stack');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void _applyFiltersWithSpecialist() {
+    final query = searchController.text.toLowerCase().trim();
+
+    List<Map<String, dynamic>> result = _allServices.where((service) {
+      // Твоя обычная фильтрация (поиск, цена, специальность)
+      final name = (service['name'] as String?)?.toLowerCase() ?? '';
+      final desc = (service['description'] as String?)?.toLowerCase() ?? '';
+      final master =
+          (service['profiles']?['display_name'] as String?)?.toLowerCase() ??
+          '';
+      final specialty =
+          (service['profiles']?['specialty'] as String?)?.toLowerCase() ?? '';
+
+      final matchesSearch =
+          name.contains(query) ||
+          desc.contains(query) ||
+          master.contains(query) ||
+          specialty.contains(query);
+
+      final matchesSpecialty =
+          _selectedSpecialties.isEmpty ||
+          _selectedSpecialties.contains(service['profiles']?['specialty']);
+
+      final price = service['price'] as num?;
+      final matchesPrice =
+          (price == null) ||
+          (_minPrice == null || price >= _minPrice!) &&
+              (_maxPrice == null || price <= _maxPrice!);
+
+      // Самое главное — фильтр по конкретному специалисту
+      final profile = service['profiles'] as Map<String, dynamic>?;
+      final serviceSpecialistId = profile?['id']?.toString();
+      final matchesSpecialist = serviceSpecialistId == _specialistFilterId;
+
+      return matchesSearch &&
+          matchesSpecialty &&
+          matchesPrice &&
+          matchesSpecialist;
+    }).toList();
+
+    // Сортировка (как у тебя)
+    switch (_sortBy) {
+      case 'price_asc':
+        result.sort(
+          (a, b) =>
+              (a['price'] as num? ?? 0).compareTo(b['price'] as num? ?? 0),
+        );
+        break;
+      case 'price_desc':
+        result.sort(
+          (a, b) =>
+              (b['price'] as num? ?? 0).compareTo(a['price'] as num? ?? 0),
+        );
+        break;
+      case 'newest':
+      default:
+        result.sort(
+          (a, b) => DateTime.parse(
+            b['created_at'],
+          ).compareTo(DateTime.parse(a['created_at'])),
+        );
+    }
+
+    _filteredServices = result;
+    notifyListeners();
   }
 
   void reportService() {}

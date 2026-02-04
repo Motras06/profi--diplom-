@@ -27,7 +27,9 @@ class _RegisterTabState extends State<RegisterTab>
   final _confirmPasswordController = TextEditingController();
   final _displayNameController = TextEditingController();
   final _aboutController = TextEditingController();
-  final _specialtyController = TextEditingController();
+
+  // Заменяем контроллер на переменную для выбранной специальности
+  String? _selectedSpecialty;
 
   UserRole _selectedRole = UserRole.user;
   File? _originalImage;
@@ -45,6 +47,29 @@ class _RegisterTabState extends State<RegisterTab>
 
   static const int maxFileSizeBytes = 1024 * 1024;
 
+  // Список специальностей
+  final List<String> _availableSpecialties = [
+    'Сантехника',
+    'Электрика',
+    'Ремонт квартир',
+    'Отделка и штукатурка',
+    'Уборка / Клининг',
+    'Красота / Парикмахер',
+    'Маникюр / Педикюр',
+    'Массаж',
+    'Авторемонт',
+    'Автомойка / детейлинг',
+    'IT / Программирование',
+    'Дизайн интерьера',
+    'Фото / Видео',
+    'Репетиторство',
+    'Перевозки / Грузчики',
+    'Сад / Огород',
+    'Ветеринар',
+    'Психология / Коучинг',
+    'Другое'
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -60,11 +85,11 @@ class _RegisterTabState extends State<RegisterTab>
 
     _slideAnimation =
         Tween<Offset>(begin: const Offset(0.0, 0.20), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _animationController,
-            curve: Curves.easeOutCubic,
-          ),
-        );
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
 
     Future.delayed(const Duration(milliseconds: 400), () {
       if (mounted) _animationController.forward();
@@ -79,7 +104,6 @@ class _RegisterTabState extends State<RegisterTab>
     _confirmPasswordController.dispose();
     _displayNameController.dispose();
     _aboutController.dispose();
-    _specialtyController.dispose();
     super.dispose();
   }
 
@@ -179,6 +203,14 @@ class _RegisterTabState extends State<RegisterTab>
       return;
     }
 
+    // Проверяем, выбрана ли специальность для специалиста
+    if (_selectedRole == UserRole.specialist && _selectedSpecialty == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Выберите специальность')),
+      );
+      return;
+    }
+
     if (_isLoading) return;
 
     setState(() => _isLoading = true);
@@ -205,7 +237,7 @@ class _RegisterTabState extends State<RegisterTab>
             ? _aboutController.text.trim()
             : null,
         'specialty': _selectedRole == UserRole.specialist
-            ? _specialtyController.text.trim()
+            ? _selectedSpecialty
             : null,
       });
 
@@ -225,9 +257,9 @@ class _RegisterTabState extends State<RegisterTab>
             ? SpecialistHome(displayName: _displayNameController.text.trim())
             : UserHome(displayName: _displayNameController.text.trim());
 
-        Navigator.of(
-          context,
-        ).pushReplacement(MaterialPageRoute(builder: (_) => destination));
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => destination),
+        );
       }
     } on AuthException catch (e) {
       if (mounted) {
@@ -241,9 +273,9 @@ class _RegisterTabState extends State<RegisterTab>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Ошибка регистрации')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ошибка регистрации')),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -287,10 +319,9 @@ class _RegisterTabState extends State<RegisterTab>
                             backgroundImage: _compressedImage != null
                                 ? FileImage(_compressedImage!)
                                 : (_originalImage != null
-                                      ? FileImage(_originalImage!)
-                                      : null),
-                            child:
-                                (_compressedImage == null &&
+                                    ? FileImage(_originalImage!)
+                                    : null),
+                            child: (_compressedImage == null &&
                                     _originalImage == null)
                                 ? Icon(
                                     Icons.add_a_photo_rounded,
@@ -322,8 +353,8 @@ class _RegisterTabState extends State<RegisterTab>
                   _compressedImage != null
                       ? 'Фото загружено (${(_compressedImage!.lengthSync() ~/ 1024).toStringAsFixed(0)} КБ)'
                       : _isLoading
-                      ? 'Сжатие изображения...'
-                      : 'Нажмите на фото, чтобы выбрать аватар (опционально)',
+                          ? 'Сжатие изображения...'
+                          : 'Нажмите на фото, чтобы выбрать аватар (опционально)',
                   style: textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -488,12 +519,26 @@ class _RegisterTabState extends State<RegisterTab>
                     ),
                   ),
                   const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _specialtyController,
-                    textInputAction: TextInputAction.done,
+
+                  // Замена текстового поля на выпадающий список
+                  DropdownButtonFormField<String>(
+                    value: _selectedSpecialty,
+                    hint: const Text('Выберите специальность *'),
+                    isExpanded: true,
+                    items: _availableSpecialties.map((specialty) {
+                      return DropdownMenuItem<String>(
+                        value: specialty,
+                        child: Text(specialty),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        _selectedSpecialty = newValue;
+                      });
+                    },
+                    validator: (value) =>
+                        value == null ? 'Выберите специальность' : null,
                     decoration: InputDecoration(
-                      labelText: 'Специальность',
-                      hintText: 'Например: Сантехник, Электрик, Плиточник...',
                       filled: true,
                       fillColor: colorScheme.surfaceContainerHighest,
                       prefixIcon: Icon(
@@ -503,6 +548,10 @@ class _RegisterTabState extends State<RegisterTab>
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
                       ),
                     ),
                   ),

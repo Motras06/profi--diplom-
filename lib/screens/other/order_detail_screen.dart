@@ -1,11 +1,12 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final Map<String, dynamic> order;
@@ -26,6 +27,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
+  // Для безопасной загрузки шрифта
+  Future<Uint8List>? _fontFuture;
+
   @override
   void initState() {
     super.initState();
@@ -44,9 +48,24 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
           CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
         );
 
+    // Загружаем шрифт заранее (асинхронно, безопасно)
+    _fontFuture = _loadFont();
+
     Future.delayed(const Duration(milliseconds: 200), () {
       if (mounted) _animController.forward();
     });
+  }
+
+  Future<Uint8List> _loadFont() async {
+    try {
+      final fontData = await DefaultAssetBundle.of(
+        context,
+      ).load('assets/fonts/DejaVuSans.ttf');
+      return fontData.buffer.asUint8List();
+    } catch (e) {
+      debugPrint('Ошибка загрузки шрифта: $e');
+      rethrow;
+    }
   }
 
   @override
@@ -55,36 +74,27 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
     super.dispose();
   }
 
-  Future<bool> _requestStoragePermission() async {
-    if (Platform.isAndroid) {
-      var status = await Permission.storage.status;
-      if (!status.isGranted) {
-        status = await Permission.storage.request();
-      }
-      return status.isGranted;
-    }
-    return true;
-  }
-
   Future<void> _generateOrderPdf() async {
-    final hasPermission = await _requestStoragePermission();
-    if (!hasPermission && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Нет разрешения на сохранение файлов')),
-      );
-      return;
-    }
+    if (!mounted) return;
 
     try {
+      // Инициализация локали (один раз)
+      await initializeDateFormatting('ru');
+
+      // Ждём загрузки шрифта
+      final fontBytes = await _fontFuture;
+
       final pdf = PdfDocument();
 
-      final fontData = await DefaultAssetBundle.of(
-        context,
-      ).load('assets/fonts/DejaVuSans.ttf');
-      final fontBytes = fontData.buffer.asUint8List();
-      final ttf = PdfTrueTypeFont(fontBytes, 12);
+      pdf.pageSettings.size = PdfPageSize.a4;
+      pdf.pageSettings.margins.all = 40;
+      pdf.pageSettings.orientation = PdfPageOrientation.portrait;
+
+      final ttf = PdfTrueTypeFont(fontBytes!, 12);
+      final boldFont = PdfTrueTypeFont(fontBytes, 14, style: PdfFontStyle.bold);
 
       final page = pdf.pages.add();
+      final pageGraphics = page.graphics;
 
       final service = widget.order['services'] as Map? ?? {};
       final specialist = widget.order['profiles'] as Map? ?? {};
@@ -99,91 +109,204 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
         'ru',
       ).format(date);
 
-      page.graphics.drawString(
-        'Заказ #${widget.order['id'] ?? '—'}',
-        PdfStandardFont(PdfFontFamily.helvetica, 20, style: PdfFontStyle.bold),
-        bounds: const Rect.fromLTWH(40, 40, 500, 40),
-      );
+      double y = page.getClientSize().height - 80;
 
-      page.graphics.drawString(
+      // Заголовок
+      pageGraphics.drawString(
+        'Заказ #${widget.order['id'] ?? '—'}',
+        boldFont,
+        brush: PdfSolidBrush(PdfColor(0, 102, 204)),
+        bounds: Rect.fromLTWH(0, y, page.getClientSize().width, 40),
+        format: PdfStringFormat(alignment: PdfTextAlignment.center),
+      );
+      y -= 60;
+
+      // Дата создания
+      pageGraphics.drawString(
         'Создан: $formattedDate',
         ttf,
-        bounds: const Rect.fromLTWH(40, 90, 500, 20),
+        brush: PdfSolidBrush(PdfColor(100, 100, 100)),
+        bounds: Rect.fromLTWH(40, y, page.getClientSize().width - 80, 25),
+      );
+      y -= 45;
+
+      // Статус
+      final statusText = _formatStatus(_currentStatus);
+      final statusColor = _getStatusColor(
+        _currentStatus,
+        Theme.of(context).colorScheme,
+      );
+      final statusBrush = PdfSolidBrush(
+        PdfColor(
+          statusColor.red * 255,
+          statusColor.green * 255,
+          statusColor.blue * 255,
+        ),
       );
 
-      page.graphics.drawString(
-        'Статус: ${_formatStatus(_currentStatus)}',
+      pageGraphics.drawString(
+        'Статус: $statusText',
+        boldFont,
+        brush: statusBrush,
+        bounds: Rect.fromLTWH(40, y, page.getClientSize().width - 80, 30),
+      );
+      y -= 50;
+
+      // Разделитель
+      pageGraphics.drawRectangle(
+        brush: PdfSolidBrush(PdfColor(220, 220, 220)),
+        bounds: Rect.fromLTWH(40, y, page.getClientSize().width - 80, 1),
+      );
+      y -= 40;
+
+      // Основная информация
+      _drawLabelValue(
+        pageGraphics,
         ttf,
-        bounds: const Rect.fromLTWH(40, 120, 500, 20),
+        boldFont,
+        'Мастер',
+        specialist['display_name'] ?? 'Не указан',
+        40,
+        y,
+        page.getClientSize().width,
       );
+      y -= 35;
 
-      page.graphics.drawString(
-        'Мастер: ${specialist['display_name'] as String? ?? 'Не указан'}',
-        PdfStandardFont(PdfFontFamily.helvetica, 14, style: PdfFontStyle.bold),
-        bounds: const Rect.fromLTWH(40, 160, 500, 30),
-      );
-
-      page.graphics.drawString(
-        'Услуга: ${service['name'] as String? ?? 'Не указана'}',
+      _drawLabelValue(
+        pageGraphics,
         ttf,
-        bounds: const Rect.fromLTWH(40, 190, 500, 20),
+        boldFont,
+        'Услуга',
+        service['name'] ?? 'Не указана',
+        40,
+        y,
+        page.getClientSize().width,
       );
+      y -= 35;
 
-      page.graphics.drawString(
-        'Цена: ${service['price'] ?? 'По договорённости'} BYN',
+      _drawLabelValue(
+        pageGraphics,
         ttf,
-        bounds: const Rect.fromLTWH(40, 210, 500, 20),
+        boldFont,
+        'Цена',
+        service['price'] != null
+            ? '${service['price']} BYN'
+            : 'По договорённости',
+        40,
+        y,
+        page.getClientSize().width,
       );
+      y -= 50;
 
-      page.graphics.drawString(
-        'Детали заказа:',
-        PdfStandardFont(PdfFontFamily.helvetica, 14, style: PdfFontStyle.bold),
-        bounds: const Rect.fromLTWH(40, 250, 500, 30),
-      );
-
-      double y = 280;
-      (details).forEach((key, value) {
-        page.graphics.drawString(
-          '$key: $value',
-          ttf,
-          bounds: Rect.fromLTWH(40, y, 500, 20),
+      // Детали заказа
+      if (details.isNotEmpty) {
+        pageGraphics.drawString(
+          'Детали заказа',
+          boldFont,
+          brush: PdfSolidBrush(PdfColor(0, 0, 0)),
+          bounds: Rect.fromLTWH(40, y, page.getClientSize().width - 80, 30),
         );
-        y += 25;
-      });
+        y -= 40;
+
+        details.forEach((key, value) {
+          final niceKey = key
+              .toString()
+              .replaceAll('_', ' ')
+              .split(' ')
+              .map((w) => w[0].toUpperCase() + w.substring(1))
+              .join(' ');
+
+          _drawLabelValue(
+            pageGraphics,
+            ttf,
+            boldFont,
+            niceKey,
+            value?.toString() ?? '—',
+            40,
+            y,
+            page.getClientSize().width,
+          );
+          y -= 35;
+        });
+      }
+
+      // Нижний колонтитул
+      pageGraphics.drawString(
+        'Сгенерировано в приложении • ${DateFormat('dd.MM.yyyy HH:mm').format(DateTime.now())}',
+        ttf,
+        brush: PdfSolidBrush(PdfColor(140, 140, 140)),
+        bounds: Rect.fromLTWH(40, 40, page.getClientSize().width - 80, 20),
+        format: PdfStringFormat(alignment: PdfTextAlignment.center),
+      );
 
       final bytes = await pdf.save();
       pdf.dispose();
 
-      final directory = await getTemporaryDirectory();
+      final directory = await getApplicationDocumentsDirectory();
       final filePath =
           '${directory.path}/order_${widget.order['id'] ?? 'unknown'}.pdf';
       final file = File(filePath);
       await file.writeAsBytes(bytes);
 
-      if (!await file.exists()) {
-        throw Exception('PDF-файл не создан');
-      }
+      debugPrint('PDF сохранён: $filePath');
 
-      final openResult = await OpenFilex.open(
+      final result = await OpenFilex.open(
         filePath,
         type: 'application/pdf',
+        uti: 'com.adobe.pdf',
       );
 
-      if (openResult.type != ResultType.done && mounted) {
+      debugPrint(
+        'OpenFilex result: ${result.type}, message: ${result.message}',
+      );
+
+      if (result.type != ResultType.done && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Не удалось открыть PDF: ${openResult.message}'),
+            content: Text(
+              'Не удалось открыть PDF: ${result.message ?? "Нет приложения для просмотра PDF"}',
+            ),
+            duration: const Duration(seconds: 6),
           ),
         );
       }
     } catch (e, stack) {
-      debugPrint('PDF ошибка: $e\n$stack');
+      debugPrint('PDF error: $e\n$stack');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Ошибка PDF: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка при работе с PDF: $e'),
+            duration: const Duration(seconds: 6),
+          ),
+        );
       }
     }
+  }
+
+  void _drawLabelValue(
+    PdfGraphics graphics,
+    PdfFont regularFont,
+    PdfFont boldFont,
+    String label,
+    String value,
+    double x,
+    double y,
+    double pageWidth,
+  ) {
+    graphics.drawString(
+      '$label:',
+      boldFont,
+      brush: PdfSolidBrush(PdfColor(50, 50, 50)),
+      bounds: Rect.fromLTWH(x, y, 200, 30),
+    );
+
+    graphics.drawString(
+      value,
+      regularFont,
+      brush: PdfSolidBrush(PdfColor(30, 30, 30)),
+      bounds: Rect.fromLTWH(x + 210, y, pageWidth - x - 250, 120),
+      format: PdfStringFormat(lineSpacing: 4, wordWrap: PdfWordWrapType.word),
+    );
   }
 
   Future<void> _cancelOrder() async {
@@ -296,30 +419,45 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final service = widget.order['services'] as Map? ?? {};
-    final specialist = widget.order['profiles'] as Map? ?? {};
-    final details = widget.order['contract_details'] as Map? ?? {};
-
+    // Безопасный доступ к данным заказа
+    final orderId = widget.order['id']?.toString() ?? '—';
+    final status = widget.order['status'] as String? ?? 'unknown';
     final createdAtRaw = widget.order['created_at'] as String?;
-    final createdDate = createdAtRaw != null
-        ? DateTime.tryParse(createdAtRaw)?.toLocal()
-        : null;
-    final formattedCreated = createdDate != null
-        ? DateFormat('dd MMMM yyyy, HH:mm', 'ru').format(createdDate)
-        : '—';
-
     final updatedAtRaw = widget.order['updated_at'] as String?;
-    final updatedDate = updatedAtRaw != null
-        ? DateTime.tryParse(updatedAtRaw)?.toLocal()
-        : null;
-    final formattedUpdated = updatedDate != null
-        ? DateFormat('dd MMMM yyyy, HH:mm', 'ru').format(updatedDate)
-        : '—';
+
+    final service = widget.order['services'] as Map<String, dynamic>? ?? {};
+    final specialist = widget.order['profiles'] as Map<String, dynamic>? ?? {};
+    final details =
+        widget.order['contract_details'] as Map<String, dynamic>? ?? {};
+
+    // Форматирование дат с защитой
+    String formattedCreated = '—';
+    String formattedUpdated = '—';
+
+    if (createdAtRaw != null && createdAtRaw.isNotEmpty) {
+      try {
+        final date = DateTime.parse(createdAtRaw).toLocal();
+        formattedCreated = DateFormat('dd MMMM yyyy, HH:mm', 'ru').format(date);
+      } catch (_) {}
+    }
+
+    if (updatedAtRaw != null && updatedAtRaw.isNotEmpty) {
+      try {
+        final date = DateTime.parse(updatedAtRaw).toLocal();
+        formattedUpdated = DateFormat('dd MMMM yyyy, HH:mm', 'ru').format(date);
+      } catch (_) {}
+    }
 
     return Scaffold(
       backgroundColor: colorScheme.background,
       appBar: AppBar(
-        title: Text('Заказ #${widget.order['id'] ?? '—'}'),
+        title: Text(
+          'Заказ #$orderId',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: colorScheme.onSurface,
+          ),
+        ),
         centerTitle: true,
         elevation: 0,
         scrolledUnderElevation: 2,
@@ -341,244 +479,247 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
           ),
         ],
       ),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: SlideTransition(
-          position: _slideAnimation,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Card(
-                  elevation: 1,
-                  shadowColor: Colors.black.withOpacity(0.12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  color: colorScheme.surfaceContainerLowest,
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _getStatusIcon(_currentStatus),
-                          size: 48,
-                          color: _getStatusColor(_currentStatus, colorScheme),
-                        ),
-                        const SizedBox(width: 20),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _formatStatus(_currentStatus),
-                                style: theme.textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: _getStatusColor(
-                                    _currentStatus,
-                                    colorScheme,
+      body: SafeArea(
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Карточка статуса
+                  Card(
+                    elevation: 1,
+                    shadowColor: Colors.black.withOpacity(0.12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    color: colorScheme.surfaceContainerLowest,
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _getStatusIcon(status),
+                            size: 48,
+                            color: _getStatusColor(status, colorScheme),
+                          ),
+                          const SizedBox(width: 20),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _formatStatus(status),
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: _getStatusColor(status, colorScheme),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Создан: $formattedCreated',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                              if (formattedUpdated != '—')
+                                const SizedBox(height: 4),
                                 Text(
-                                  'Обновлён: $formattedUpdated',
+                                  'Создан: $formattedCreated',
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     color: colorScheme.onSurfaceVariant,
                                   ),
                                 ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                Card(
-                  elevation: 1,
-                  shadowColor: Colors.black.withOpacity(0.12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  color: colorScheme.surfaceContainerLowest,
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Исполнитель и услуга',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 32,
-                              backgroundColor: colorScheme.primaryContainer,
-                              foregroundImage: specialist['photo_url'] != null
-                                  ? NetworkImage(
-                                      specialist['photo_url'] as String,
-                                    )
-                                  : null,
-                              child: specialist['photo_url'] == null
-                                  ? Text(
-                                      (specialist['display_name'] as String?)
-                                              ?.substring(0, 1)
-                                              .toUpperCase() ??
-                                          '?',
-                                      style: TextStyle(
-                                        color: colorScheme.onPrimaryContainer,
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
+                                if (formattedUpdated != '—')
                                   Text(
-                                    specialist['display_name'] as String? ??
-                                        'Мастер',
-                                    style: theme.textTheme.titleMedium
-                                        ?.copyWith(fontWeight: FontWeight.w600),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    service['name'] as String? ??
-                                        'Услуга не указана',
-                                    style: theme.textTheme.bodyLarge,
-                                  ),
-                                  if (service['price'] != null) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${service['price']} BYN',
-                                      style: theme.textTheme.titleMedium
-                                          ?.copyWith(
-                                            color: colorScheme.primary,
-                                            fontWeight: FontWeight.w700,
-                                          ),
+                                    'Обновлён: $formattedUpdated',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
                                     ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                Card(
-                  elevation: 1,
-                  shadowColor: Colors.black.withOpacity(0.12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  color: colorScheme.surfaceContainerLowest,
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Детали заказа',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildDetailRow(
-                          Icons.location_on_outlined,
-                          'Адрес',
-                          details['address'] as String? ?? 'Не указан',
-                        ),
-                        const Divider(height: 24),
-                        _buildDetailRow(
-                          Icons.calendar_today_outlined,
-                          'Дата и время',
-                          '${details['preferred_date'] as String? ?? '—'} ${details['preferred_time'] as String? ?? ''}',
-                        ),
-                        const Divider(height: 24),
-                        _buildDetailRow(
-                          Icons.timer_outlined,
-                          'Продолжительность',
-                          details['duration'] as String? ?? 'Не указана',
-                        ),
-                        if ((details['comment'] as String?)?.isNotEmpty ??
-                            false) ...[
-                          const Divider(height: 24),
-                          Text(
-                            'Комментарий клиента:',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            details['comment'] as String,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              height: 1.5,
+                                  ),
+                              ],
                             ),
                           ),
                         ],
-                      ],
+                      ),
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 40),
+                  const SizedBox(height: 24),
 
-                if (_currentStatus == 'pending')
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: _isCancelling ? null : _cancelOrder,
-                      icon: _isCancelling
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
+                  // Карточка исполнителя и услуги
+                  Card(
+                    elevation: 1,
+                    shadowColor: Colors.black.withOpacity(0.12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    color: colorScheme.surfaceContainerLowest,
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Исполнитель и услуга',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 32,
+                                backgroundColor: colorScheme.primaryContainer,
+                                foregroundImage: specialist['photo_url'] != null
+                                    ? NetworkImage(
+                                        specialist['photo_url'] as String,
+                                      )
+                                    : null,
+                                child: specialist['photo_url'] == null
+                                    ? Text(
+                                        (specialist['display_name'] as String?)
+                                                ?.substring(0, 1)
+                                                .toUpperCase() ??
+                                            '?',
+                                        style: TextStyle(
+                                          color: colorScheme.onPrimaryContainer,
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      )
+                                    : null,
                               ),
-                            )
-                          : const Icon(Icons.cancel_rounded),
-                      label: Text(
-                        _isCancelling ? 'Отмена...' : 'Отменить заказ',
-                      ),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: colorScheme.error,
-                        foregroundColor: colorScheme.onError,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 4,
-                        shadowColor: colorScheme.error.withOpacity(0.4),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      specialist['display_name'] as String? ??
+                                          'Мастер',
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      service['name'] as String? ??
+                                          'Услуга не указана',
+                                      style: theme.textTheme.bodyLarge,
+                                    ),
+                                    if (service['price'] != null) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${service['price']} BYN',
+                                        style: theme.textTheme.titleMedium
+                                            ?.copyWith(
+                                              color: colorScheme.primary,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ),
-              ],
+
+                  const SizedBox(height: 24),
+
+                  Card(
+                    elevation: 1,
+                    shadowColor: Colors.black.withOpacity(0.12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    color: colorScheme.surfaceContainerLowest,
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Детали заказа',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildDetailRow(
+                            Icons.location_on_outlined,
+                            'Адрес',
+                            details['address'] as String? ?? 'Не указан',
+                          ),
+                          const Divider(height: 24),
+                          _buildDetailRow(
+                            Icons.calendar_today_outlined,
+                            'Дата и время',
+                            '${details['preferred_date'] as String? ?? '—'} ${details['preferred_time'] as String? ?? ''}',
+                          ),
+                          const Divider(height: 24),
+                          _buildDetailRow(
+                            Icons.timer_outlined,
+                            'Продолжительность',
+                            details['duration'] as String? ?? 'Не указана',
+                          ),
+                          if ((details['comment'] as String?)?.isNotEmpty ??
+                              false) ...[
+                            const Divider(height: 24),
+                            Text(
+                              'Комментарий клиента:',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              details['comment'] as String,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  if (_currentStatus == 'pending')
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: _isCancelling ? null : _cancelOrder,
+                        icon: _isCancelling
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.cancel_rounded),
+                        label: Text(
+                          _isCancelling ? 'Отмена...' : 'Отменить заказ',
+                        ),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: colorScheme.error,
+                          foregroundColor: colorScheme.onError,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 4,
+                          shadowColor: colorScheme.error.withOpacity(0.4),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),

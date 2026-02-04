@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:profi/screens/auth/auth_screen.dart';
+import 'package:profi/widgets/specialist/profile_tab/documents.dart';
 import 'package:profi/widgets/specialist/profile_tab/edit_profile_form.dart';
 import 'package:profi/screens/other/settings_screen.dart';
 import '../../../services/supabase_service.dart';
@@ -13,8 +14,7 @@ class ProfileTab extends StatefulWidget {
   State<ProfileTab> createState() => _ProfileTabState();
 }
 
-class _ProfileTabState extends State<ProfileTab>
-    with SingleTickerProviderStateMixin {
+class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateMixin {
   bool _isLoading = true;
   bool _isEditing = false;
 
@@ -40,10 +40,9 @@ class _ProfileTabState extends State<ProfileTab>
       parent: _fadeController,
       curve: Curves.easeOutCubic,
     );
-    _slideAnimation =
-        Tween<Offset>(begin: const Offset(0, 0.25), end: Offset.zero).animate(
-          CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic),
-        );
+    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.25), end: Offset.zero).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic),
+    );
 
     _loadProfile();
 
@@ -83,9 +82,9 @@ class _ProfileTabState extends State<ProfileTab>
     } catch (e) {
       debugPrint('Ошибка загрузки профиля: $e');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Ошибка загрузки профиля: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка загрузки профиля: $e')),
+        );
         setState(() => _isLoading = false);
       }
     }
@@ -103,15 +102,12 @@ class _ProfileTabState extends State<ProfileTab>
       final userId = supabase.auth.currentUser?.id;
       if (userId == null) return;
 
-      await supabase
-          .from('profiles')
-          .update({
-            'display_name': name.trim(),
-            'about': about?.trim(),
-            'specialty': specialty?.trim(),
-            'photo_url': photoUrl,
-          })
-          .eq('id', userId);
+      await supabase.from('profiles').update({
+        'display_name': name.trim(),
+        'about': about?.trim(),
+        'specialty': specialty?.trim(),
+        'photo_url': photoUrl,
+      }).eq('id', userId);
 
       if (mounted) {
         setState(() {
@@ -123,15 +119,15 @@ class _ProfileTabState extends State<ProfileTab>
           _isLoading = false;
         });
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Профиль сохранён!')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Профиль сохранён!')),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Ошибка сохранения: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка сохранения: $e')),
+        );
         setState(() => _isLoading = false);
       }
     }
@@ -213,7 +209,6 @@ class _ProfileTabState extends State<ProfileTab>
           ),
         ],
       ),
-
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeAnimation,
@@ -256,7 +251,6 @@ class _ProfileTabState extends State<ProfileTab>
                                 : null,
                           ),
                           const SizedBox(height: 24),
-
                           Text(
                             _displayName ?? 'Мастер',
                             style: theme.textTheme.headlineMedium?.copyWith(
@@ -272,9 +266,7 @@ class _ProfileTabState extends State<ProfileTab>
                               ),
                             ),
                           ],
-
                           const SizedBox(height: 16),
-
                           OutlinedButton.icon(
                             onPressed: _startEditing,
                             icon: const Icon(Icons.edit_rounded, size: 20),
@@ -335,7 +327,40 @@ class _ProfileTabState extends State<ProfileTab>
                       ),
                     ),
 
+                  // ──────────────────────────────────────────────
+                  // Добавлен блок «Мои документы»
+                  // ──────────────────────────────────────────────
                   const SizedBox(height: 24),
+
+                  Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.folder_outlined,
+                        color: colorScheme.primary,
+                        size: 32,
+                      ),
+                      title: const Text(
+                        'Мои документы',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: const Text('Сертификаты, дипломы, лицензии'),
+                      trailing: const Icon(Icons.arrow_forward_ios_rounded),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SpecialistDocuments(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
 
                   OutlinedButton.icon(
                     onPressed: _logout,

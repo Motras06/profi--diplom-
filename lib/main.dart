@@ -11,6 +11,7 @@ import 'theme/app_theme.dart';
 import 'screens/auth/auth_screen.dart';
 import 'screens/user/user_home.dart';
 import 'screens/specialist/specialist_home.dart';
+import 'screens/admin/admin_home.dart'; // ← добавьте этот импорт
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,15 +53,20 @@ class MainApp extends StatelessWidget {
           .eq('id', currentUser.id)
           .single();
 
-      final String role = response['role'];
-      final String displayName = response['display_name'] ?? 'Пользователь';
+      final String role = (response['role'] as String?) ?? 'user';
+      final String displayName = (response['display_name'] as String?) ?? 'Пользователь';
 
-      if (role == 'specialist') {
-        return SpecialistHome(displayName: displayName);
-      } else {
-        return UserHome(displayName: displayName);
+      switch (role) {
+        case 'admin':
+          return AdminHome(displayName: displayName);
+        case 'specialist':
+          return SpecialistHome(displayName: displayName);
+        default:
+          return UserHome(displayName: displayName);
       }
     } catch (e) {
+      // Если профиль не найден или ошибка → кидаем на авторизацию
+      // Можно добавить print(e) или Sentry/Log для отладки
       return const AuthScreen();
     }
   }
@@ -84,12 +90,18 @@ class MainApp extends StatelessWidget {
       home: FutureBuilder<Widget>(
         future: _getStartingScreen(),
         builder: (context, snapshot) {
-          if (snapshot.hasData) return snapshot.data!;
-          if (snapshot.hasError) return const AuthScreen();
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
 
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          if (snapshot.hasData) {
+            return snapshot.data!;
+          }
+
+          // Ошибка или null → авторизация
+          return const AuthScreen();
         },
       ),
     );

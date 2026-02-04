@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:profi/screens/other/all_specialist_services_view.dart';
+import 'package:profi/screens/other/document_view.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../screens/other/service_chat_screen.dart';
-import '../../widgets/specialist/profile_tab/documents.dart';
 
 class SpecialistProfileScreen extends StatefulWidget {
   final Map<String, dynamic> specialist;
@@ -50,6 +51,18 @@ class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
     }
   }
 
+  void _openAllServices() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SpecialistServicesScreen(
+          specialistId: widget.specialist['id'],
+          specialistName: widget.specialist['display_name'] ?? 'Специалист',
+        ),
+      ),
+    );
+  }
+
   Future<void> _loadReviewsStats() async {
     try {
       final reviews = await supabase
@@ -80,10 +93,8 @@ class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ServiceChatScreen(
-          specialist: widget.specialist,
-          service: null, // можно передать услугу, если нужно
-        ),
+        builder: (context) =>
+            ServiceChatScreen(specialist: widget.specialist, service: null),
       ),
     );
   }
@@ -91,7 +102,12 @@ class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
   void _openAllDocuments() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const SpecialistDocuments()),
+      MaterialPageRoute(
+        builder: (context) => SpecialistDocumentsScreen(
+          specialistId: widget.specialist['id'],
+          specialistName: widget.specialist['display_name'] ?? 'Специалист',
+        ),
+      ),
     );
   }
 
@@ -253,11 +269,12 @@ class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
               ),
             ),
 
+          // Секция документов — теперь только кнопка
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              padding: const EdgeInsets.fromLTRB(16, 32, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Документы',
@@ -265,57 +282,50 @@ class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  if (_pinnedDocuments.isNotEmpty)
-                    TextButton(
-                      onPressed: _openAllDocuments,
-                      child: const Text('Все'),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _pinnedDocuments.isEmpty && !_isLoadingDocs
+                        ? null
+                        : _openAllDocuments,
+                    icon: const Icon(Icons.folder_outlined),
+                    label: Text(
+                      _isLoadingDocs
+                          ? 'Загрузка...'
+                          : 'Закреплённые файлы (${_pinnedDocuments.length})',
                     ),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(52),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  Text(
+                    'Услуги',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _openAllServices,
+                    icon: const Icon(Icons.work_outline_rounded),
+                    label: const Text('Все услуги специалиста'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(52),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
 
-          if (_isLoadingDocs)
-            const SliverToBoxAdapter(
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (_pinnedDocuments.isEmpty)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Center(
-                  child: Text(
-                    'Нет загруженных документов',
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ),
-            )
-          else
-            SliverList(
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final doc = _pinnedDocuments[index];
-                final name = doc['name'] as String? ?? 'Документ';
-
-                return ListTile(
-                  leading: Icon(
-                    Icons.description_rounded,
-                    color: colorScheme.primary,
-                  ),
-                  title: Text(name),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.download_rounded),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Скачивание: $name')),
-                      );
-                    },
-                  ),
-                );
-              }, childCount: _pinnedDocuments.length.clamp(0, 3)),
-            ),
           const SliverToBoxAdapter(child: SizedBox(height: 40)),
         ],
       ),

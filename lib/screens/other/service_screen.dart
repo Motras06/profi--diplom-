@@ -31,6 +31,19 @@ class _ServiceScreenState extends State<ServiceScreen> {
   int? _selectedRating;
   final TextEditingController _reviewController = TextEditingController();
 
+  // Для жалобы
+  final List<String> _complaintReasons = [
+    'Низкое качество / обман',
+    'Некорректная цена',
+    'Мошенничество',
+    'Нарушение правил платформы',
+    'Спам / реклама',
+    'Другое',
+  ];
+
+  String? _selectedComplaintReason;
+  final TextEditingController _complaintDetailsController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -58,9 +71,9 @@ class _ServiceScreenState extends State<ServiceScreen> {
     } catch (e) {
       setState(() => _isLoadingPhotos = false);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Ошибка загрузки фото: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка загрузки фото: $e')),
+        );
       }
     }
   }
@@ -133,9 +146,9 @@ class _ServiceScreenState extends State<ServiceScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Ошибка загрузки отзывов: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка загрузки отзывов: $e')),
+        );
       }
     } finally {
       setState(() => _isLoadingReviews = false);
@@ -144,17 +157,17 @@ class _ServiceScreenState extends State<ServiceScreen> {
 
   Future<void> _submitOrUpdateReview() async {
     if (_selectedRating == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Поставьте оценку')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Поставьте оценку')),
+      );
       return;
     }
 
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Войдите в аккаунт')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Войдите в аккаунт')),
+      );
       return;
     }
 
@@ -173,14 +186,14 @@ class _ServiceScreenState extends State<ServiceScreen> {
 
       if (_hasUserReview && _userReviewId != null) {
         await supabase.from('reviews').update(data).eq('id', _userReviewId!);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Отзыв обновлён')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Отзыв обновлён')),
+        );
       } else {
         await supabase.from('reviews').insert(data);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Отзыв добавлен')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Отзыв добавлен')),
+        );
       }
 
       Navigator.pop(context);
@@ -188,9 +201,9 @@ class _ServiceScreenState extends State<ServiceScreen> {
       _selectedRating = null;
       await _loadReviewsAndUserReview();
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка: $e')),
+      );
     }
   }
 
@@ -267,6 +280,130 @@ class _ServiceScreenState extends State<ServiceScreen> {
     });
   }
 
+  Future<void> _submitComplaint() async {
+    if (_selectedComplaintReason == null || _selectedComplaintReason!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Выберите причину жалобы')),
+      );
+      return;
+    }
+
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Необходимо войти в аккаунт')),
+      );
+      return;
+    }
+
+    final serviceId = widget.service['id'] as int?;
+    if (serviceId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ошибка: нет ID услуги')),
+      );
+      return;
+    }
+
+    try {
+      final details = _complaintDetailsController.text.trim();
+
+      await supabase.from('complaints').insert({
+        'complainant_id': userId,
+        'target_type': 'service',
+        'target_id': serviceId,
+        'reason': _selectedComplaintReason,
+        if (details.isNotEmpty) 'details': details,
+        'status': 'pending',
+      });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Жалоба отправлена. Спасибо! Мы рассмотрим её в ближайшее время.',
+          ),
+          duration: Duration(seconds: 4),
+        ),
+      );
+
+      _selectedComplaintReason = null;
+      _complaintDetailsController.clear();
+      Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Не удалось отправить жалобу: $e')),
+        );
+      }
+    }
+  }
+
+  void _showComplaintDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Пожаловаться на услугу'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Причина жалобы:'),
+              const SizedBox(height: 8),
+              ..._complaintReasons.map(
+                (reason) => RadioListTile<String>(
+                  title: Text(reason),
+                  value: reason,
+                  groupValue: _selectedComplaintReason,
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedComplaintReason = value;
+                    });
+                  },
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text('Подробности (необязательно):'),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _complaintDetailsController,
+                maxLines: 4,
+                minLines: 3,
+                decoration: const InputDecoration(
+                  hintText: 'Опишите проблему подробнее...',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: _submitComplaint,
+            child: const Text('Отправить жалобу'),
+          ),
+        ],
+      ),
+    ).then((_) {
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          setState(() {
+            _selectedComplaintReason = null;
+            _complaintDetailsController.clear();
+          });
+        }
+      });
+    });
+  }
+
   void _openChat() {
     final specialist = widget.service['profiles'] ?? {};
     Navigator.push(
@@ -323,10 +460,10 @@ class _ServiceScreenState extends State<ServiceScreen> {
                                 fit: BoxFit.cover,
                                 loadingBuilder: (context, child, progress) =>
                                     progress == null
-                                    ? child
-                                    : const Center(
-                                        child: CircularProgressIndicator(),
-                                      ),
+                                        ? child
+                                        : const Center(
+                                            child: CircularProgressIndicator(),
+                                          ),
                                 errorBuilder: (_, __, ___) => const Center(
                                   child: Icon(
                                     Icons.error,
@@ -453,9 +590,8 @@ class _ServiceScreenState extends State<ServiceScreen> {
                 ),
                 if (price != null)
                   Chip(
-                    backgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.primary.withOpacity(0.1),
+                    backgroundColor:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.1),
                     label: Text(
                       '$price BYN',
                       style: TextStyle(
@@ -518,21 +654,38 @@ class _ServiceScreenState extends State<ServiceScreen> {
 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const Text(
                   'Отзывы',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
                 ),
-                if (!_hasUserReview)
-                  TextButton(
-                    onPressed: _showReviewDialog,
-                    child: const Text('Оставить отзыв'),
-                  )
-                else
-                  TextButton(
-                    onPressed: _showReviewDialog,
-                    child: const Text('Редактировать отзыв'),
-                  ),
+                Row(
+                  children: [
+                    if (!_hasUserReview)
+                      TextButton(
+                        onPressed: _showReviewDialog,
+                        child: const Text('Оставить отзыв'),
+                      )
+                    else
+                      TextButton(
+                        onPressed: _showReviewDialog,
+                        child: const Text('Редактировать отзыв'),
+                      ),
+                    TextButton.icon(
+                      onPressed: _showComplaintDialog,
+                      icon: const Icon(
+                        Icons.flag_outlined,
+                        size: 20,
+                        color: Colors.redAccent,
+                      ),
+                      label: const Text(
+                        'Пожаловаться',
+                        style: TextStyle(color: Colors.redAccent),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -643,6 +796,7 @@ class _ServiceScreenState extends State<ServiceScreen> {
   @override
   void dispose() {
     _reviewController.dispose();
+    _complaintDetailsController.dispose();
     super.dispose();
   }
 }

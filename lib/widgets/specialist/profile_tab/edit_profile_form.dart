@@ -189,7 +189,11 @@ class _EditProfileFormState extends State<EditProfileForm>
     return Scaffold(
       backgroundColor: colorScheme.background,
       appBar: AppBar(
-        title: const Text('Редактировать профиль'),
+        title: Text('Редактировать профиль',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: colorScheme.onSurface,
+          ),),
         centerTitle: true,
         backgroundColor: colorScheme.surfaceContainerLow,
         foregroundColor: colorScheme.onSurface,
