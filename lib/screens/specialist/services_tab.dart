@@ -63,6 +63,49 @@ class _ServicesTabState extends State<ServicesTab>
     super.dispose();
   }
 
+  Future<void> _deleteService(int serviceId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Удалить услугу?'),
+        content: const Text(
+          'Это действие нельзя отменить. Все связанные фото и данные будут удалены.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await supabase.from('services').delete().eq('id', serviceId);
+
+      await _loadServices();
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Услуга удалена')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка удаления: $e')));
+      }
+    }
+  }
+
   Future<void> _loadServices() async {
     setState(() => _isLoading = true);
 
@@ -211,13 +254,8 @@ class _ServicesTabState extends State<ServicesTab>
                           return ServiceCard(
                             service: service,
                             onEdit: () => _showAddEditDialog(service: service),
-                            onDelete: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Удаление услуги...'),
-                                ),
-                              );
-                            },
+                            onDelete: () =>
+                                _deleteService(service['id'] as int),
                           );
                         },
                       ),

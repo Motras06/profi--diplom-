@@ -4,7 +4,7 @@ import 'package:prowirksearch/screens/other/view_for_specialist.dart';
 class ServiceCard extends StatefulWidget {
   final Map<String, dynamic> service;
   final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final Future<void> Function() onDelete; 
 
   const ServiceCard({
     super.key,
@@ -21,6 +21,8 @@ class _ServiceCardState extends State<ServiceCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _actionController;
   late Animation<double> _scaleAnimation;
+
+  bool _isDeleting = false;
 
   @override
   void initState() {
@@ -40,6 +42,41 @@ class _ServiceCardState extends State<ServiceCard>
     super.dispose();
   }
 
+  Future<void> _handleDelete() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Удалить услугу?'),
+        content: const Text(
+          'Это действие нельзя отменить. Услуга и все её фото будут удалены.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isDeleting = true);
+
+    try {
+      await widget.onDelete();
+    } finally {
+      if (mounted) {
+        setState(() => _isDeleting = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -54,7 +91,7 @@ class _ServiceCardState extends State<ServiceCard>
     final description =
         widget.service['description'] as String? ?? 'Нет описания';
     final price = widget.service['price'];
-    final priceText = price != null ? '${price} BYN' : 'По договорённости';
+    final priceText = price != null ? '$price BYN' : 'По договорённости';
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
@@ -107,49 +144,29 @@ class _ServiceCardState extends State<ServiceCard>
                               if (loadingProgress == null) return child;
                               return Container(
                                 color: colorScheme.surfaceContainerHighest,
-                                child: Center(
-                                  child: SizedBox(
-                                    width: 44,
-                                    height: 44,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 3,
-                                      value:
-                                          loadingProgress.expectedTotalBytes !=
-                                              null
-                                          ? loadingProgress
-                                                    .cumulativeBytesLoaded /
-                                                loadingProgress
-                                                    .expectedTotalBytes!
-                                          : null,
-                                      color: colorScheme.primary.withOpacity(
-                                        0.7,
-                                      ),
-                                    ),
-                                  ),
+                                child: const Center(
+                                  child: CircularProgressIndicator(),
                                 ),
                               );
                             },
                             errorBuilder: (_, __, ___) => Container(
                               color: colorScheme.surfaceContainerHighest,
-                              child: Center(
+                              child: const Center(
                                 child: Icon(
                                   Icons.broken_image_rounded,
                                   size: 52,
-                                  color: colorScheme.onSurfaceVariant
-                                      .withOpacity(0.6),
+                                  color: Colors.red,
                                 ),
                               ),
                             ),
                           )
                         : Container(
                             color: colorScheme.surfaceContainerHighest,
-                            child: Center(
+                            child: const Center(
                               child: Icon(
                                 Icons.image_not_supported_rounded,
                                 size: 52,
-                                color: colorScheme.onSurfaceVariant.withOpacity(
-                                  0.6,
-                                ),
+                                color: Colors.grey,
                               ),
                             ),
                           ),
@@ -207,19 +224,32 @@ class _ServiceCardState extends State<ServiceCard>
                               ],
                             ),
                             child: IconButton(
-                              icon: const Icon(
-                                Icons.delete_rounded,
-                                color: Colors.white,
-                                size: 22,
-                              ),
+                              icon: _isDeleting
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.delete_rounded,
+                                      color: Colors.white,
+                                      size: 22,
+                                    ),
                               padding: const EdgeInsets.all(8),
                               constraints: const BoxConstraints(),
-                              onPressed: () {
-                                _actionController
-                                    .forward(from: 0.0)
-                                    .then((_) => _actionController.reverse());
-                                widget.onDelete();
-                              },
+                              onPressed: _isDeleting
+                                  ? null
+                                  : () {
+                                      _actionController
+                                          .forward(from: 0.0)
+                                          .then(
+                                            (_) => _actionController.reverse(),
+                                          );
+                                      _handleDelete();
+                                    },
                             ),
                           ),
                         ),
