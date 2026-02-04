@@ -33,10 +33,7 @@ class _ServiceCardState extends State<ServiceCard>
     );
 
     _saveScaleAnimation = Tween<double>(begin: 1.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _saveController,
-        curve: Curves.elasticOut, 
-      ),
+      CurvedAnimation(parent: _saveController, curve: Curves.elasticOut),
     );
   }
 

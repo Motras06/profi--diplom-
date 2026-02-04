@@ -1,9 +1,8 @@
-// lib/main.dart
 import 'package:device_preview/device_preview.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:profi/providers/theme_provider.dart';
+import 'package:prowirksearch/providers/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -11,7 +10,7 @@ import 'theme/app_theme.dart';
 import 'screens/auth/auth_screen.dart';
 import 'screens/user/user_home.dart';
 import 'screens/specialist/specialist_home.dart';
-import 'screens/admin/admin_home.dart'; // ← добавьте этот импорт
+import 'screens/admin/admin_home.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,7 +53,8 @@ class MainApp extends StatelessWidget {
           .single();
 
       final String role = (response['role'] as String?) ?? 'user';
-      final String displayName = (response['display_name'] as String?) ?? 'Пользователь';
+      final String displayName =
+          (response['display_name'] as String?) ?? 'Пользователь';
 
       switch (role) {
         case 'admin':
@@ -65,8 +65,6 @@ class MainApp extends StatelessWidget {
           return UserHome(displayName: displayName);
       }
     } catch (e) {
-      // Если профиль не найден или ошибка → кидаем на авторизацию
-      // Можно добавить print(e) или Sentry/Log для отладки
       return const AuthScreen();
     }
   }
@@ -100,7 +98,6 @@ class MainApp extends StatelessWidget {
             return snapshot.data!;
           }
 
-          // Ошибка или null → авторизация
           return const AuthScreen();
         },
       ),

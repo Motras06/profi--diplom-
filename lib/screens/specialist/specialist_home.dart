@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:profi/screens/specialist/services_tab.dart';
-import 'package:profi/screens/specialist/chat_tab.dart';
-import 'package:profi/screens/specialist/profile_tab.dart';
-import 'package:profi/screens/specialist/orders_tab.dart';
+import 'package:prowirksearch/screens/specialist/services_tab.dart';
+import 'package:prowirksearch/screens/specialist/chat_tab.dart';
+import 'package:prowirksearch/screens/specialist/profile_tab.dart';
+import 'package:prowirksearch/screens/specialist/orders_tab.dart';
 
 class SpecialistHome extends StatefulWidget {
   final String displayName;

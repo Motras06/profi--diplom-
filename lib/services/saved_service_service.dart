@@ -33,7 +33,7 @@ class SavedServiceService extends ChangeNotifier {
     'Сад / Огород',
     'Ветеринар',
     'Психология / Коучинг',
-    'Другое'
+    'Другое',
   ];
 
   final Set<String> _selectedSpecialties = {};

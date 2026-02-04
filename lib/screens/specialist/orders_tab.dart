@@ -272,7 +272,7 @@ class _OrdersTabState extends State<OrdersTab>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(serviceName),
-            if (price != null) Text('Цена: $price ₽'),
+            if (price != null) Text('Цена: $price BYN'),
             Text(
               'Создан: ${createdAt.day}.${createdAt.month}.${createdAt.year} ${createdAt.hour}:${createdAt.minute.toString().padLeft(2, '0')}',
               style: TextStyle(

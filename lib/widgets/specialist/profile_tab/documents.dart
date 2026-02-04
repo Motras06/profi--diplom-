@@ -44,11 +44,12 @@ class _SpecialistDocumentsState extends State<SpecialistDocuments> {
       setState(() {
         _documents = List<Map<String, dynamic>>.from(response);
       });
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('Ошибка загрузки документов: $e\n$stack');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Ошибка загрузки: $e'),
+            content: Text('Не удалось загрузить документы: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -167,7 +168,15 @@ class _SpecialistDocumentsState extends State<SpecialistDocuments> {
 
   Future<void> _downloadAndOpen(String fileUrl, String fileName) async {
     try {
-      final uri = Uri.parse(fileUrl);
+      if (fileUrl.trim().isEmpty) {
+        throw Exception('Пустая ссылка на файл');
+      }
+
+      final uri = Uri.tryParse(fileUrl);
+      if (uri == null) {
+        throw Exception('Неверный формат URL файла');
+      }
+
       final pathInBucket = uri.pathSegments
           .skipWhile((s) => s != _bucketName)
           .skip(1)
@@ -177,10 +186,18 @@ class _SpecialistDocumentsState extends State<SpecialistDocuments> {
           .from(_bucketName)
           .createSignedUrl(pathInBucket, 3600);
 
+      if (signedUrl.isEmpty) {
+        throw Exception('Не удалось сгенерировать signed URL');
+      }
+
       final dir = Platform.isAndroid
           ? await getExternalStorageDirectory()
           : await getTemporaryDirectory();
-      final savePath = '${dir!.path}/$fileName';
+      if (dir == null) {
+        throw Exception('Не удалось получить директорию для сохранения');
+      }
+
+      final savePath = '${dir.path}/$fileName';
 
       final dio = Dio();
       await dio.download(signedUrl, savePath);
@@ -189,7 +206,8 @@ class _SpecialistDocumentsState extends State<SpecialistDocuments> {
       if (openResult.type != ResultType.done) {
         throw Exception(openResult.message);
       }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('Ошибка в _downloadAndOpen: $e\n$stack');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -251,11 +269,28 @@ class _SpecialistDocumentsState extends State<SpecialistDocuments> {
                 itemCount: _documents.length,
                 itemBuilder: (context, index) {
                   final doc = _documents[index];
-                  final name = doc['name'] as String? ?? 'Без названия';
+
+                  final name =
+                      (doc['name'] as String?)?.trim() ?? 'Без названия';
                   final description =
-                      doc['description'] as String? ?? 'Нет описания';
-                  final fileUrl = doc['file_url'] as String;
-                  final createdAt = DateTime.parse(doc['created_at'] as String);
+                      (doc['description'] as String?)?.trim() ?? 'Нет описания';
+                  final fileUrl = (doc['file_url'] as String?)?.trim() ?? '';
+                  final createdAtRaw = doc['created_at'] as String?;
+
+                  DateTime? createdAt;
+                  String formattedDate = 'Дата неизвестна';
+                  if (createdAtRaw != null && createdAtRaw.trim().isNotEmpty) {
+                    try {
+                      createdAt = DateTime.tryParse(createdAtRaw);
+                      if (createdAt != null) {
+                        formattedDate = _formatDate(createdAt);
+                      }
+                    } catch (e) {
+                      debugPrint(
+                        'Ошибка парсинга даты для документа $index: $e',
+                      );
+                    }
+                  }
 
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
@@ -279,7 +314,7 @@ class _SpecialistDocumentsState extends State<SpecialistDocuments> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Добавлен: ${_formatDate(createdAt)}',
+                            'Добавлен: $formattedDate',
                             style: TextStyle(
                               color: Colors.grey[500],
                               fontSize: 12,
@@ -287,10 +322,12 @@ class _SpecialistDocumentsState extends State<SpecialistDocuments> {
                           ),
                         ],
                       ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.download),
-                        onPressed: () => _downloadAndOpen(fileUrl, name),
-                      ),
+                      trailing: fileUrl.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.download),
+                              onPressed: () => _downloadAndOpen(fileUrl, name),
+                            )
+                          : null,
                     ),
                   );
                 },

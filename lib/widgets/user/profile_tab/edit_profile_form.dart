@@ -1,10 +1,9 @@
-// lib/widgets/user/profile_tab/edit_profile_form.dart
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
-import 'package:profi/widgets/specialist/profile_tab/change_password_dialog.dart';
+import 'package:prowirksearch/widgets/specialist/profile_tab/change_password_dialog.dart';
 import '../../../services/supabase_service.dart';
 
 typedef OnProfileSaved = Future<void> Function(String name, String? photoUrl);
@@ -165,8 +164,6 @@ class _EditProfileFormState extends State<EditProfileForm>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 8),
-
-            // Заголовок + объяснение
             Text(
               'Редактирование профиля',
               style: theme.textTheme.headlineMedium?.copyWith(
@@ -188,7 +185,6 @@ class _EditProfileFormState extends State<EditProfileForm>
 
             const SizedBox(height: 32),
 
-            // Аватар
             Center(
               child: GestureDetector(
                 onTap: _isSaving ? null : _pickAndCompressPhoto,

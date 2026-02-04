@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:profi/screens/other/all_specialist_services_view.dart';
-import 'package:profi/screens/other/document_view.dart';
+import 'package:prowirksearch/screens/other/all_specialist_services_view.dart';
+import 'package:prowirksearch/screens/other/document_view.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../screens/other/service_chat_screen.dart';
 
@@ -269,7 +269,6 @@ class _SpecialistProfileScreenState extends State<SpecialistProfileScreen> {
               ),
             ),
 
-          // Секция документов — теперь только кнопка
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 32, 16, 8),

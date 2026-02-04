@@ -1,8 +1,14 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:profi/screens/other/specialist_profile.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:prowirksearch/screens/other/specialist_profile.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
+import 'dart:developer' as developer;
 
 class SpecialistChatScreen extends StatefulWidget {
   final String clientId;
@@ -142,6 +148,151 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
     }
   }
 
+  Future<void> _pickAndSendDocument() async {
+    if (_isUserBlacklisted) return;
+
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'],
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      final file = result.files.first;
+      final filePath = file.path;
+      if (filePath == null) return;
+
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileNameInStorage =
+          'chat/${_currentUserId}_$_clientId/$timestamp-${file.name}';
+
+      await supabase.storage
+          .from('document')
+          .upload(fileNameInStorage, File(filePath));
+
+      final publicUrl = supabase.storage
+          .from('document')
+          .getPublicUrl(fileNameInStorage);
+
+      await supabase.from('chat_messages').insert({
+        'sender_id': _currentUserId,
+        'receiver_id': _clientId,
+        'message': null,
+        'file_url': publicUrl,
+        'timestamp': DateTime.now().toUtc().toIso8601String(),
+        'read': false,
+      });
+
+      _scrollToBottom();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Не удалось отправить файл: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _sendMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+
+    try {
+      await supabase.from('chat_messages').insert({
+        'sender_id': _currentUserId,
+        'receiver_id': _clientId,
+        'message': text,
+        'file_url': null,
+        'timestamp': DateTime.now().toUtc().toIso8601String(),
+        'read': false,
+      });
+
+      _messageController.clear();
+      _scrollToBottom();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Не удалось отправить: $e')));
+      }
+    }
+  }
+
+  Future<void> _downloadAndOpenFile(String fileUrl, String fileName) async {
+    if (fileUrl.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ссылка на файл отсутствует')),
+        );
+      }
+      return;
+    }
+
+    try {
+      final dio = Dio();
+
+      String saveFileName = fileName.trim();
+      if (saveFileName.isEmpty) {
+        final uri = Uri.parse(fileUrl);
+        saveFileName = uri.pathSegments.last;
+        if (saveFileName.isEmpty) {
+          saveFileName = 'file_${DateTime.now().millisecondsSinceEpoch}';
+        }
+      }
+
+      final directory = await getDownloadsDirectory();
+      if (directory == null) {
+        throw Exception('Не удалось получить папку загрузок');
+      }
+
+      final savePath = '${directory.path}/$saveFileName';
+
+      await dio.download(fileUrl, savePath);
+
+      final result = await OpenFilex.open(savePath);
+
+      if (mounted) {
+        if (result.type != ResultType.done) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Не удалось открыть: ${result.message}'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Файл открыт: $saveFileName')));
+        }
+      }
+    } catch (e, stack) {
+      developer.log('Ошибка скачивания/открытия файла: $e\n$stack');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  IconData _getFileIcon(String fileName) {
+    final ext = fileName.split('.').last.toLowerCase();
+    return switch (ext) {
+      'pdf' => Icons.picture_as_pdf_rounded,
+      'doc' || 'docx' => Icons.description_rounded,
+      'jpg' || 'jpeg' || 'png' || 'gif' || 'webp' => Icons.image_rounded,
+      'zip' || 'rar' => Icons.folder_zip_rounded,
+      _ => Icons.attach_file_rounded,
+    };
+  }
+
   Future<void> _checkIfBlacklisted() async {
     try {
       final res = await supabase
@@ -249,29 +400,6 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
     }
   }
 
-  Future<void> _sendMessage() async {
-    final text = _messageController.text.trim();
-    if (text.isEmpty) return;
-
-    try {
-      await supabase.from('chat_messages').insert({
-        'sender_id': _currentUserId,
-        'receiver_id': _clientId,
-        'message': text,
-        'timestamp': DateTime.now().toUtc().toIso8601String(),
-        'read': false,
-      });
-
-      _messageController.clear();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Не удалось отправить: $e')));
-      }
-    }
-  }
-
   void _scrollToBottom({bool animate = true}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) return;
@@ -312,38 +440,6 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
         ),
       );
     }
-  }
-
-  void _showMessageContextMenu(String messageText) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(
-              'Действия с сообщением',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.content_copy_rounded),
-            title: const Text('Копировать'),
-            onTap: () {
-              _copyMessage(messageText);
-              Navigator.pop(context);
-            },
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
-    );
   }
 
   @override
@@ -461,31 +557,52 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
                       itemBuilder: (context, index) {
                         final msg = _messages[index];
                         final isMe = msg['sender_id'] == _currentUserId;
-                        final text = msg['message'] as String? ?? '';
+                        final text = msg['message'] as String?;
+                        final fileUrl = msg['file_url'] as String?;
                         final time = _formatTime(msg['timestamp'] as String?);
+
+                        final hasFile = fileUrl != null && fileUrl.isNotEmpty;
+                        final hasText = text != null && text.isNotEmpty;
+
+                        if (!hasText && !hasFile)
+                          return const SizedBox.shrink();
+
+                        final displayFileName = hasFile
+                            ? Uri.parse(fileUrl).pathSegments.last
+                            : '';
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
-                          child: GestureDetector(
-                            onLongPress: () {
-                              if (text.isNotEmpty)
-                                _showMessageContextMenu(text);
-                            },
-                            child: Align(
-                              alignment: isMe
-                                  ? Alignment.centerRight
-                                  : Alignment.centerLeft,
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxWidth:
-                                      MediaQuery.of(context).size.width * 0.75,
+                          child: Align(
+                            alignment: isMe
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth:
+                                    MediaQuery.of(context).size.width * 0.78,
+                              ),
+                              child: Material(
+                                elevation: isMe ? 1 : 0.5,
+                                shadowColor: Colors.black.withOpacity(0.12),
+                                color: isMe
+                                    ? colorScheme.primaryContainer
+                                    : colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.only(
+                                  topLeft: const Radius.circular(20),
+                                  topRight: const Radius.circular(20),
+                                  bottomLeft: Radius.circular(isMe ? 20 : 4),
+                                  bottomRight: Radius.circular(isMe ? 4 : 20),
                                 ),
-                                child: Material(
-                                  elevation: isMe ? 1 : 0.5,
-                                  shadowColor: Colors.black.withOpacity(0.12),
-                                  color: isMe
-                                      ? colorScheme.primaryContainer
-                                      : colorScheme.surfaceContainerHighest,
+                                child: InkWell(
+                                  onTap: hasFile
+                                      ? () => _downloadAndOpenFile(
+                                          fileUrl,
+                                          displayFileName,
+                                        )
+                                      : hasText
+                                      ? () => _copyMessage(text)
+                                      : null,
                                   borderRadius: BorderRadius.only(
                                     topLeft: const Radius.circular(20),
                                     topRight: const Radius.circular(20),
@@ -502,16 +619,53 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
                                           ? CrossAxisAlignment.end
                                           : CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          text,
-                                          style: theme.textTheme.bodyMedium
-                                              ?.copyWith(
+                                        if (hasFile) ...[
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                _getFileIcon(displayFileName),
+                                                size: 22,
                                                 color: isMe
                                                     ? colorScheme
                                                           .onPrimaryContainer
                                                     : colorScheme.onSurface,
                                               ),
-                                        ),
+                                              const SizedBox(width: 8),
+                                              Flexible(
+                                                child: Text(
+                                                  displayFileName,
+                                                  style: theme
+                                                      .textTheme
+                                                      .bodyMedium
+                                                      ?.copyWith(
+                                                        color: isMe
+                                                            ? colorScheme
+                                                                  .onPrimaryContainer
+                                                            : colorScheme
+                                                                  .onSurface,
+                                                        decoration:
+                                                            TextDecoration
+                                                                .underline,
+                                                      ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ] else if (hasText)
+                                          Text(
+                                            text,
+                                            style: theme.textTheme.bodyMedium
+                                                ?.copyWith(
+                                                  color: isMe
+                                                      ? colorScheme
+                                                            .onPrimaryContainer
+                                                      : colorScheme.onSurface,
+                                                ),
+                                          ),
+
                                         const SizedBox(height: 4),
                                         Text(
                                           time,
@@ -539,7 +693,7 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
                 ),
 
                 Container(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
                   decoration: BoxDecoration(
                     color: colorScheme.surface,
                     border: Border(
@@ -552,6 +706,20 @@ class _SpecialistChatScreenState extends State<SpecialistChatScreen>
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.attach_file_rounded,
+                          color: _isUserBlacklisted
+                              ? colorScheme.onSurface.withOpacity(0.38)
+                              : colorScheme.primary,
+                        ),
+                        onPressed: _isUserBlacklisted
+                            ? null
+                            : _pickAndSendDocument,
+                        tooltip: 'Прикрепить файл',
+                      ),
+                      const SizedBox(width: 4),
+
                       Expanded(
                         child: TextField(
                           controller: _messageController,

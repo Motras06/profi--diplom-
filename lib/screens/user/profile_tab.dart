@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:profi/models/profile_stats.dart';
-import 'package:profi/services/profile_service.dart';
-import 'package:profi/widgets/user/profile_tab/my_orders_screen.dart';
-import 'package:profi/widgets/user/profile_tab/my_reviews_screen.dart';
-import 'package:profi/widgets/user/profile_tab/profile_avatar.dart';
-import 'package:profi/widgets/user/profile_tab/profile_info.dart';
-import 'package:profi/widgets/user/profile_tab/profile_stats_row.dart';
-import 'package:profi/widgets/user/profile_tab/edit_profile_form.dart';
-import 'package:profi/screens/other/settings_screen.dart';
-import 'package:profi/screens/auth/auth_screen.dart';
-import 'package:profi/services/supabase_service.dart';
+import 'package:prowirksearch/models/profile_stats.dart';
+import 'package:prowirksearch/services/profile_service.dart';
+import 'package:prowirksearch/widgets/user/profile_tab/my_orders_screen.dart';
+import 'package:prowirksearch/widgets/user/profile_tab/my_reviews_screen.dart';
+import 'package:prowirksearch/widgets/user/profile_tab/profile_avatar.dart';
+import 'package:prowirksearch/widgets/user/profile_tab/profile_info.dart';
+import 'package:prowirksearch/widgets/user/profile_tab/profile_stats_row.dart';
+import 'package:prowirksearch/widgets/user/profile_tab/edit_profile_form.dart';
+import 'package:prowirksearch/screens/other/settings_screen.dart';
+import 'package:prowirksearch/screens/auth/auth_screen.dart';
+import 'package:prowirksearch/services/supabase_service.dart';
 
 class UserProfileTab extends StatefulWidget {
   const UserProfileTab({super.key});

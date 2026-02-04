@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:profi/services/supabase_service.dart';
+import 'package:prowirksearch/services/supabase_service.dart';
 
 class UsersTab extends StatefulWidget {
   const UsersTab({super.key});
@@ -23,7 +23,9 @@ class _UsersTabState extends State<UsersTab> {
     try {
       final response = await supabase
           .from('profiles')
-          .select('id, role, display_name, about, specialty, photo_url, created_at')
+          .select(
+            'id, role, display_name, about, specialty, photo_url, created_at',
+          )
           .order('created_at', ascending: false)
           .limit(150);
 
@@ -39,7 +41,9 @@ class _UsersTabState extends State<UsersTab> {
             content: Text('Ошибка загрузки пользователей: $e'),
             backgroundColor: Theme.of(context).colorScheme.errorContainer,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -49,7 +53,9 @@ class _UsersTabState extends State<UsersTab> {
   Future<void> _showUserEditDialog(Map<String, dynamic> user) async {
     final colorScheme = Theme.of(context).colorScheme;
 
-    final displayNameCtrl = TextEditingController(text: user['display_name'] ?? '');
+    final displayNameCtrl = TextEditingController(
+      text: user['display_name'] ?? '',
+    );
     final aboutCtrl = TextEditingController(text: user['about'] ?? '');
     final specialtyCtrl = TextEditingController(text: user['specialty'] ?? '');
     final photoUrlCtrl = TextEditingController(text: user['photo_url'] ?? '');
@@ -63,13 +69,15 @@ class _UsersTabState extends State<UsersTab> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
               backgroundColor: colorScheme.surfaceContainerHigh,
               title: Text(
                 'Профиль: ${user['display_name'] ?? 'Без имени'}',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: colorScheme.onSurface,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(color: colorScheme.onSurface),
               ),
               content: SingleChildScrollView(
                 child: Column(
@@ -79,8 +87,8 @@ class _UsersTabState extends State<UsersTab> {
                     Text(
                       'ID: ${user['id']}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     const SizedBox(height: 24),
 
@@ -88,7 +96,9 @@ class _UsersTabState extends State<UsersTab> {
                       controller: displayNameCtrl,
                       decoration: InputDecoration(
                         labelText: 'Имя / Ник',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -97,7 +107,9 @@ class _UsersTabState extends State<UsersTab> {
                       controller: aboutCtrl,
                       decoration: InputDecoration(
                         labelText: 'О себе',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       maxLines: 4,
                       minLines: 3,
@@ -108,7 +120,9 @@ class _UsersTabState extends State<UsersTab> {
                       controller: specialtyCtrl,
                       decoration: InputDecoration(
                         labelText: 'Специальность',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -117,7 +131,9 @@ class _UsersTabState extends State<UsersTab> {
                       controller: photoUrlCtrl,
                       decoration: InputDecoration(
                         labelText: 'URL фотографии',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -126,7 +142,9 @@ class _UsersTabState extends State<UsersTab> {
                       value: selectedRole,
                       decoration: InputDecoration(
                         labelText: 'Роль',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       items: roles.map((role) {
                         return DropdownMenuItem(value: role, child: Text(role));
@@ -138,7 +156,10 @@ class _UsersTabState extends State<UsersTab> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton.icon(
-                        icon: Icon(Icons.delete_forever, color: colorScheme.error),
+                        icon: Icon(
+                          Icons.delete_forever,
+                          color: colorScheme.error,
+                        ),
                         label: Text(
                           'Удалить профиль',
                           style: TextStyle(color: colorScheme.error),
@@ -147,7 +168,9 @@ class _UsersTabState extends State<UsersTab> {
                           final confirmed = await showDialog<bool>(
                             context: dialogContext,
                             builder: (ctx) => AlertDialog(
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(28),
+                              ),
                               title: const Text('Удалить пользователя?'),
                               content: const Text(
                                 'Действие нельзя отменить.\nСвязанные данные (заказы, отзывы, услуги и т.д.) также будут удалены.',
@@ -159,7 +182,10 @@ class _UsersTabState extends State<UsersTab> {
                                 ),
                                 TextButton(
                                   onPressed: () => Navigator.pop(ctx, true),
-                                  child: Text('Удалить', style: TextStyle(color: colorScheme.error)),
+                                  child: Text(
+                                    'Удалить',
+                                    style: TextStyle(color: colorScheme.error),
+                                  ),
                                 ),
                               ],
                             ),
@@ -193,7 +219,6 @@ class _UsersTabState extends State<UsersTab> {
 
     if (!mounted) return;
 
-    // Удаление профиля
     if (shouldDelete == true) {
       try {
         await supabase.from('profiles').delete().eq('id', user['id']);
@@ -205,7 +230,9 @@ class _UsersTabState extends State<UsersTab> {
               content: Text('Ошибка при удалении профиля: $e'),
               backgroundColor: colorScheme.errorContainer,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           );
         }
@@ -213,13 +240,20 @@ class _UsersTabState extends State<UsersTab> {
       return;
     }
 
-    // Сохранение изменений
     try {
       final updates = {
-        'display_name': displayNameCtrl.text.trim().isNotEmpty ? displayNameCtrl.text.trim() : null,
-        'about': aboutCtrl.text.trim().isNotEmpty ? aboutCtrl.text.trim() : null,
-        'specialty': specialtyCtrl.text.trim().isNotEmpty ? specialtyCtrl.text.trim() : null,
-        'photo_url': photoUrlCtrl.text.trim().isNotEmpty ? photoUrlCtrl.text.trim() : null,
+        'display_name': displayNameCtrl.text.trim().isNotEmpty
+            ? displayNameCtrl.text.trim()
+            : null,
+        'about': aboutCtrl.text.trim().isNotEmpty
+            ? aboutCtrl.text.trim()
+            : null,
+        'specialty': specialtyCtrl.text.trim().isNotEmpty
+            ? specialtyCtrl.text.trim()
+            : null,
+        'photo_url': photoUrlCtrl.text.trim().isNotEmpty
+            ? photoUrlCtrl.text.trim()
+            : null,
         'role': selectedRole,
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       };
@@ -233,7 +267,9 @@ class _UsersTabState extends State<UsersTab> {
             content: Text('Ошибка при сохранении профиля: $e'),
             backgroundColor: colorScheme.errorContainer,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -246,14 +282,18 @@ class _UsersTabState extends State<UsersTab> {
     final textTheme = Theme.of(context).textTheme;
 
     if (_loading) {
-      return Center(child: CircularProgressIndicator(color: colorScheme.primary));
+      return Center(
+        child: CircularProgressIndicator(color: colorScheme.primary),
+      );
     }
 
     if (_users.isEmpty) {
       return Center(
         child: Text(
           'Пользователей пока нет',
-          style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
+          style: textTheme.bodyLarge?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
         ),
       );
     }
@@ -276,7 +316,9 @@ class _UsersTabState extends State<UsersTab> {
           return Card(
             margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
             elevation: 1,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             color: colorScheme.surfaceContainerLow,
             clipBehavior: Clip.antiAlias,
             child: InkWell(
@@ -284,13 +326,21 @@ class _UsersTabState extends State<UsersTab> {
               child: Padding(
                 padding: const EdgeInsets.all(4),
                 child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   leading: CircleAvatar(
                     radius: 28,
                     backgroundColor: colorScheme.primaryContainer,
-                    foregroundImage: user['photo_url'] != null ? NetworkImage(user['photo_url']) : null,
+                    foregroundImage: user['photo_url'] != null
+                        ? NetworkImage(user['photo_url'])
+                        : null,
                     child: user['photo_url'] == null
-                        ? Icon(Icons.person_rounded, color: colorScheme.onPrimaryContainer)
+                        ? Icon(
+                            Icons.person_rounded,
+                            color: colorScheme.onPrimaryContainer,
+                          )
                         : null,
                   ),
                   title: Text(
@@ -306,11 +356,15 @@ class _UsersTabState extends State<UsersTab> {
                       const SizedBox(height: 4),
                       Text(
                         'ID: ${user['id'].toString().substring(0, 8)}…',
-                        style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
                       ),
                       Text(
                         'Роль: $role • $date',
-                        style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),

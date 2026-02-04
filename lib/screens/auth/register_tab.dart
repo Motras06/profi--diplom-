@@ -4,8 +4,8 @@ import 'package:image/image.dart' as img;
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:profi/screens/specialist/specialist_home.dart';
-import 'package:profi/screens/user/user_home.dart';
+import 'package:prowirksearch/screens/specialist/specialist_home.dart';
+import 'package:prowirksearch/screens/user/user_home.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../services/supabase_service.dart';
@@ -28,7 +28,6 @@ class _RegisterTabState extends State<RegisterTab>
   final _displayNameController = TextEditingController();
   final _aboutController = TextEditingController();
 
-  // Заменяем контроллер на переменную для выбранной специальности
   String? _selectedSpecialty;
 
   UserRole _selectedRole = UserRole.user;
@@ -47,7 +46,6 @@ class _RegisterTabState extends State<RegisterTab>
 
   static const int maxFileSizeBytes = 1024 * 1024;
 
-  // Список специальностей
   final List<String> _availableSpecialties = [
     'Сантехника',
     'Электрика',
@@ -67,7 +65,7 @@ class _RegisterTabState extends State<RegisterTab>
     'Сад / Огород',
     'Ветеринар',
     'Психология / Коучинг',
-    'Другое'
+    'Другое',
   ];
 
   @override
@@ -85,11 +83,11 @@ class _RegisterTabState extends State<RegisterTab>
 
     _slideAnimation =
         Tween<Offset>(begin: const Offset(0.0, 0.20), end: Offset.zero).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeOutCubic,
-      ),
-    );
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
     Future.delayed(const Duration(milliseconds: 400), () {
       if (mounted) _animationController.forward();
@@ -203,11 +201,10 @@ class _RegisterTabState extends State<RegisterTab>
       return;
     }
 
-    // Проверяем, выбрана ли специальность для специалиста
     if (_selectedRole == UserRole.specialist && _selectedSpecialty == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Выберите специальность')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Выберите специальность')));
       return;
     }
 
@@ -257,9 +254,9 @@ class _RegisterTabState extends State<RegisterTab>
             ? SpecialistHome(displayName: _displayNameController.text.trim())
             : UserHome(displayName: _displayNameController.text.trim());
 
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => destination),
-        );
+        Navigator.of(
+          context,
+        ).pushReplacement(MaterialPageRoute(builder: (_) => destination));
       }
     } on AuthException catch (e) {
       if (mounted) {
@@ -273,9 +270,9 @@ class _RegisterTabState extends State<RegisterTab>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ошибка регистрации')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Ошибка регистрации')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -319,9 +316,10 @@ class _RegisterTabState extends State<RegisterTab>
                             backgroundImage: _compressedImage != null
                                 ? FileImage(_compressedImage!)
                                 : (_originalImage != null
-                                    ? FileImage(_originalImage!)
-                                    : null),
-                            child: (_compressedImage == null &&
+                                      ? FileImage(_originalImage!)
+                                      : null),
+                            child:
+                                (_compressedImage == null &&
                                     _originalImage == null)
                                 ? Icon(
                                     Icons.add_a_photo_rounded,
@@ -353,8 +351,8 @@ class _RegisterTabState extends State<RegisterTab>
                   _compressedImage != null
                       ? 'Фото загружено (${(_compressedImage!.lengthSync() ~/ 1024).toStringAsFixed(0)} КБ)'
                       : _isLoading
-                          ? 'Сжатие изображения...'
-                          : 'Нажмите на фото, чтобы выбрать аватар (опционально)',
+                      ? 'Сжатие изображения...'
+                      : 'Нажмите на фото, чтобы выбрать аватар (опционально)',
                   style: textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -520,7 +518,6 @@ class _RegisterTabState extends State<RegisterTab>
                   ),
                   const SizedBox(height: 20),
 
-                  // Замена текстового поля на выпадающий список
                   DropdownButtonFormField<String>(
                     value: _selectedSpecialty,
                     hint: const Text('Выберите специальность *'),

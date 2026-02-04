@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:profi/screens/other/service_chat_screen.dart';
-import 'package:profi/screens/other/order_screen.dart';
+import 'package:prowirksearch/screens/other/service_chat_screen.dart';
+import 'package:prowirksearch/screens/other/order_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'specialist_profile.dart';
 
@@ -31,7 +31,6 @@ class _ServiceScreenState extends State<ServiceScreen> {
   int? _selectedRating;
   final TextEditingController _reviewController = TextEditingController();
 
-  // Для жалобы
   final List<String> _complaintReasons = [
     'Низкое качество / обман',
     'Некорректная цена',
@@ -42,7 +41,8 @@ class _ServiceScreenState extends State<ServiceScreen> {
   ];
 
   String? _selectedComplaintReason;
-  final TextEditingController _complaintDetailsController = TextEditingController();
+  final TextEditingController _complaintDetailsController =
+      TextEditingController();
 
   @override
   void initState() {
@@ -71,9 +71,9 @@ class _ServiceScreenState extends State<ServiceScreen> {
     } catch (e) {
       setState(() => _isLoadingPhotos = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки фото: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка загрузки фото: $e')));
       }
     }
   }
@@ -146,9 +146,9 @@ class _ServiceScreenState extends State<ServiceScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки отзывов: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка загрузки отзывов: $e')));
       }
     } finally {
       setState(() => _isLoadingReviews = false);
@@ -157,17 +157,17 @@ class _ServiceScreenState extends State<ServiceScreen> {
 
   Future<void> _submitOrUpdateReview() async {
     if (_selectedRating == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Поставьте оценку')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Поставьте оценку')));
       return;
     }
 
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Войдите в аккаунт')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Войдите в аккаунт')));
       return;
     }
 
@@ -186,14 +186,14 @@ class _ServiceScreenState extends State<ServiceScreen> {
 
       if (_hasUserReview && _userReviewId != null) {
         await supabase.from('reviews').update(data).eq('id', _userReviewId!);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Отзыв обновлён')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Отзыв обновлён')));
       } else {
         await supabase.from('reviews').insert(data);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Отзыв добавлен')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Отзыв добавлен')));
       }
 
       Navigator.pop(context);
@@ -201,9 +201,9 @@ class _ServiceScreenState extends State<ServiceScreen> {
       _selectedRating = null;
       await _loadReviewsAndUserReview();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
     }
   }
 
@@ -282,9 +282,9 @@ class _ServiceScreenState extends State<ServiceScreen> {
 
   Future<void> _submitComplaint() async {
     if (_selectedComplaintReason == null || _selectedComplaintReason!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Выберите причину жалобы')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Выберите причину жалобы')));
       return;
     }
 
@@ -298,9 +298,9 @@ class _ServiceScreenState extends State<ServiceScreen> {
 
     final serviceId = widget.service['id'] as int?;
     if (serviceId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ошибка: нет ID услуги')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Ошибка: нет ID услуги')));
       return;
     }
 
@@ -375,7 +375,10 @@ class _ServiceScreenState extends State<ServiceScreen> {
                 decoration: const InputDecoration(
                   hintText: 'Опишите проблему подробнее...',
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
                 ),
               ),
             ],
@@ -460,10 +463,10 @@ class _ServiceScreenState extends State<ServiceScreen> {
                                 fit: BoxFit.cover,
                                 loadingBuilder: (context, child, progress) =>
                                     progress == null
-                                        ? child
-                                        : const Center(
-                                            child: CircularProgressIndicator(),
-                                          ),
+                                    ? child
+                                    : const Center(
+                                        child: CircularProgressIndicator(),
+                                      ),
                                 errorBuilder: (_, __, ___) => const Center(
                                   child: Icon(
                                     Icons.error,
@@ -590,8 +593,9 @@ class _ServiceScreenState extends State<ServiceScreen> {
                 ),
                 if (price != null)
                   Chip(
-                    backgroundColor:
-                        Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.1),
                     label: Text(
                       '$price BYN',
                       style: TextStyle(

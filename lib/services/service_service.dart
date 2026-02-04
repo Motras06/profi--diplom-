@@ -191,12 +191,10 @@ class ServiceService extends ChangeNotifier {
 
   void setSpecialistFilter(String? specialistId) {
     _specialistFilterId = specialistId;
-    // Можно сразу вызвать _applyFilters(), если данные уже загружены
     _applyFilters();
     notifyListeners();
   }
 
-  // Самое важное — изменить loadServices, чтобы фильтровать на сервере
   Future<void> loadServices2() async {
     _isLoading = true;
     notifyListeners();
@@ -204,7 +202,6 @@ class ServiceService extends ChangeNotifier {
     try {
       final userId = supabase.auth.currentUser?.id;
 
-      // Самый простой запрос — без фильтров и присваиваний
       final response = await supabase
           .from('services')
           .select('''
@@ -215,7 +212,6 @@ class ServiceService extends ChangeNotifier {
 
       final List<Map<String, dynamic>> services = List.from(response);
 
-      // Загрузка главной фотографии
       for (var service in services) {
         final photos = await supabase
             .from('service_photos')
@@ -229,7 +225,6 @@ class ServiceService extends ChangeNotifier {
             : null;
       }
 
-      // Сохранённые услуги
       if (userId != null) {
         final saved = await supabase
             .from('saved_services')
@@ -242,7 +237,6 @@ class ServiceService extends ChangeNotifier {
       _allServices = services;
       _filteredServices = List.from(services);
 
-      // Применяем все фильтры, включая специалиста
       _applyFiltersWithSpecialist();
     } catch (e, stack) {
       _allServices = [];
@@ -258,7 +252,6 @@ class ServiceService extends ChangeNotifier {
     final query = searchController.text.toLowerCase().trim();
 
     List<Map<String, dynamic>> result = _allServices.where((service) {
-      // Твоя обычная фильтрация (поиск, цена, специальность)
       final name = (service['name'] as String?)?.toLowerCase() ?? '';
       final desc = (service['description'] as String?)?.toLowerCase() ?? '';
       final master =
@@ -283,7 +276,6 @@ class ServiceService extends ChangeNotifier {
           (_minPrice == null || price >= _minPrice!) &&
               (_maxPrice == null || price <= _maxPrice!);
 
-      // Самое главное — фильтр по конкретному специалисту
       final profile = service['profiles'] as Map<String, dynamic>?;
       final serviceSpecialistId = profile?['id']?.toString();
       final matchesSpecialist = serviceSpecialistId == _specialistFilterId;
@@ -294,7 +286,6 @@ class ServiceService extends ChangeNotifier {
           matchesSpecialist;
     }).toList();
 
-    // Сортировка (как у тебя)
     switch (_sortBy) {
       case 'price_asc':
         result.sort(

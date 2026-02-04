@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:profi/widgets/specialist/services_tab/empty_services_state.dart';
-import 'package:profi/widgets/specialist/services_tab/service_card.dart';
-import 'package:profi/widgets/specialist/services_tab/add_edit_service_dialog.dart';
+import 'package:prowirksearch/widgets/specialist/services_tab/empty_services_state.dart';
+import 'package:prowirksearch/widgets/specialist/services_tab/service_card.dart';
+import 'package:prowirksearch/widgets/specialist/services_tab/add_edit_service_dialog.dart';
 import '../../services/supabase_service.dart';
 
 class ServicesTab extends StatefulWidget {

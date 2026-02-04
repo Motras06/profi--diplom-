@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:profi/services/supabase_service.dart';
-import 'package:profi/screens/other/service_screen.dart';
-import 'package:profi/screens/other/specialist_profile.dart';
+import 'package:prowirksearch/services/supabase_service.dart';
+import 'package:prowirksearch/screens/other/service_screen.dart';
+import 'package:prowirksearch/screens/other/specialist_profile.dart';
 
 class ServicesTab extends StatefulWidget {
   const ServicesTab({super.key});
@@ -24,8 +24,8 @@ class _ServicesTabState extends State<ServicesTab> {
     setState(() => _loading = true);
     try {
       final rawData = await supabase
-    .from('services')
-    .select('''
+          .from('services')
+          .select('''
       id,
       name,
       description,
@@ -45,12 +45,12 @@ class _ServicesTabState extends State<ServicesTab> {
         "order"
       )
     ''')
-    .order('created_at', ascending: false); 
+          .order('created_at', ascending: false);
 
-
-      // Безопасное приведение типов — это решает TypeError
       final List<Map<String, dynamic>> parsed = (rawData as List<dynamic>)
-          .map((item) => Map<String, dynamic>.from(item as Map<dynamic, dynamic>))
+          .map(
+            (item) => Map<String, dynamic>.from(item as Map<dynamic, dynamic>),
+          )
           .toList();
 
       setState(() {
@@ -65,7 +65,9 @@ class _ServicesTabState extends State<ServicesTab> {
             content: Text('Ошибка загрузки услуг: $e'),
             backgroundColor: Theme.of(context).colorScheme.errorContainer,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -101,7 +103,10 @@ class _ServicesTabState extends State<ServicesTab> {
     if (confirmed != true || !mounted) return;
 
     try {
-      await supabase.from('service_photos').delete().eq('service_id', serviceId);
+      await supabase
+          .from('service_photos')
+          .delete()
+          .eq('service_id', serviceId);
       await supabase.from('services').delete().eq('id', serviceId);
       await _loadServices();
 
@@ -111,7 +116,9 @@ class _ServicesTabState extends State<ServicesTab> {
             content: const Text('Услуга удалена'),
             backgroundColor: Theme.of(context).colorScheme.primaryContainer,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -122,7 +129,9 @@ class _ServicesTabState extends State<ServicesTab> {
             content: Text('Ошибка удаления: $e'),
             backgroundColor: Theme.of(context).colorScheme.errorContainer,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -143,7 +152,9 @@ class _ServicesTabState extends State<ServicesTab> {
       return Center(
         child: Text(
           'Услуг пока нет',
-          style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
+          style: textTheme.bodyLarge?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
         ),
       );
     }
@@ -158,18 +169,24 @@ class _ServicesTabState extends State<ServicesTab> {
         itemBuilder: (context, index) {
           final service = _services[index];
 
-          // Профиль специалиста
           final specialist = service['profiles'] as Map<String, dynamic>? ?? {};
-          final String specialistName = specialist['display_name'] as String? ?? 'Специалист';
+          final String specialistName =
+              specialist['display_name'] as String? ?? 'Специалист';
           final String? specialistPhoto = specialist['photo_url'] as String?;
 
-          // Фото услуги (первое по order)
           final photosRaw = service['service_photos'] as List<dynamic>? ?? [];
-          final photos = photosRaw.map((p) => Map<String, dynamic>.from(p as Map<dynamic, dynamic>)).toList();
-          photos.sort((a, b) => (a['order'] as int).compareTo(b['order'] as int));
-          final String? photoUrl = photos.isNotEmpty ? photos.first['photo_url'] as String? : null;
+          final photos = photosRaw
+              .map((p) => Map<String, dynamic>.from(p as Map<dynamic, dynamic>))
+              .toList();
+          photos.sort(
+            (a, b) => (a['order'] as int).compareTo(b['order'] as int),
+          );
+          final String? photoUrl = photos.isNotEmpty
+              ? photos.first['photo_url'] as String?
+              : null;
 
-          final String serviceName = service['name'] as String? ?? 'Без названия';
+          final String serviceName =
+              service['name'] as String? ?? 'Без названия';
           final price = service['price'];
           final priceText = price != null ? '$price BYN' : 'По договорённости';
 
@@ -194,7 +211,9 @@ class _ServicesTabState extends State<ServicesTab> {
             ),
             child: Card(
               clipBehavior: Clip.antiAlias,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               elevation: 0,
               color: colorScheme.surfaceContainerLow,
               margin: EdgeInsets.zero,
@@ -224,7 +243,8 @@ class _ServicesTabState extends State<ServicesTab> {
                                 child: Icon(
                                   Icons.broken_image_rounded,
                                   size: 52,
-                                  color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                  color: colorScheme.onSurfaceVariant
+                                      .withOpacity(0.6),
                                 ),
                               ),
                             ),
@@ -238,11 +258,17 @@ class _ServicesTabState extends State<ServicesTab> {
                                     height: 44,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 3,
-                                      value: loadingProgress.expectedTotalBytes != null
-                                          ? loadingProgress.cumulativeBytesLoaded /
-                                              loadingProgress.expectedTotalBytes!
+                                      value:
+                                          loadingProgress.expectedTotalBytes !=
+                                              null
+                                          ? loadingProgress
+                                                    .cumulativeBytesLoaded /
+                                                loadingProgress
+                                                    .expectedTotalBytes!
                                           : null,
-                                      color: colorScheme.primary.withOpacity(0.7),
+                                      color: colorScheme.primary.withOpacity(
+                                        0.7,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -305,7 +331,8 @@ class _ServicesTabState extends State<ServicesTab> {
                               children: [
                                 CircleAvatar(
                                   radius: 18,
-                                  backgroundColor: colorScheme.surfaceContainerHigh,
+                                  backgroundColor:
+                                      colorScheme.surfaceContainerHigh,
                                   backgroundImage: specialistPhoto != null
                                       ? NetworkImage(specialistPhoto)
                                       : null,

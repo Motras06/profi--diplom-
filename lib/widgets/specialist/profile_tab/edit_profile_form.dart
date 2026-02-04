@@ -40,7 +40,32 @@ class _EditProfileFormState extends State<EditProfileForm>
     with SingleTickerProviderStateMixin {
   late TextEditingController _nameController;
   late TextEditingController _aboutController;
-  late TextEditingController _specialtyController;
+  late TextEditingController _customSpecialtyController;
+
+  String? _selectedSpecialty;
+  bool _showCustomSpecialtyField = false;
+
+  final List<String> _availableSpecialties = [
+    'Сантехника',
+    'Электрика',
+    'Ремонт квартир',
+    'Отделка и штукатурка',
+    'Уборка / Клининг',
+    'Красота / Парикмахер',
+    'Маникюр / Педикюр',
+    'Массаж',
+    'Авторемонт',
+    'Автомойка / детейлинг',
+    'IT / Программирование',
+    'Дизайн интерьера',
+    'Фото / Видео',
+    'Репетиторство',
+    'Перевозки / Грузчики',
+    'Сад / Огород',
+    'Ветеринар',
+    'Психология / Коучинг',
+    'Другое',
+  ];
 
   File? _newPhotoFile;
   final _picker = ImagePicker();
@@ -59,9 +84,18 @@ class _EditProfileFormState extends State<EditProfileForm>
 
     _nameController = TextEditingController(text: widget.initialName);
     _aboutController = TextEditingController(text: widget.initialAbout ?? '');
-    _specialtyController = TextEditingController(
-      text: widget.initialSpecialty ?? '',
-    );
+    _customSpecialtyController = TextEditingController();
+
+    final initial = widget.initialSpecialty;
+    if (initial != null && initial.isNotEmpty) {
+      if (_availableSpecialties.contains(initial)) {
+        _selectedSpecialty = initial;
+      } else {
+        _selectedSpecialty = 'Другое';
+        _customSpecialtyController.text = initial;
+        _showCustomSpecialtyField = true;
+      }
+    }
 
     _fadeController = AnimationController(
       vsync: this,
@@ -85,7 +119,7 @@ class _EditProfileFormState extends State<EditProfileForm>
   void dispose() {
     _nameController.dispose();
     _aboutController.dispose();
-    _specialtyController.dispose();
+    _customSpecialtyController.dispose();
     _fadeController.dispose();
     super.dispose();
   }
@@ -108,26 +142,31 @@ class _EditProfileFormState extends State<EditProfileForm>
   }
 
   Future<File?> _compressToUnder1MB(File file) async {
-    Uint8List bytes = await file.readAsBytes();
-    int quality = 90;
+    try {
+      Uint8List bytes = await file.readAsBytes();
+      int quality = 90;
 
-    while (quality > 10 && bytes.lengthInBytes > maxFileSizeBytes) {
-      img.Image? image = img.decodeImage(bytes);
-      if (image == null) break;
+      while (quality > 10 && bytes.lengthInBytes > maxFileSizeBytes) {
+        img.Image? image = img.decodeImage(bytes);
+        if (image == null) break;
 
-      if (image.width > 800 || image.height > 800) {
-        image = img.copyResize(image, width: 800);
+        if (image.width > 800 || image.height > 800) {
+          image = img.copyResize(image, width: 800);
+        }
+
+        bytes = img.encodeJpg(image, quality: quality);
+        quality -= 10;
       }
 
-      bytes = img.encodeJpg(image, quality: quality);
-      quality -= 10;
+      final tempFile = File(
+        '${Directory.systemTemp.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+      await tempFile.writeAsBytes(bytes);
+      return tempFile;
+    } catch (e) {
+      debugPrint('Ошибка сжатия фото: $e');
+      return null;
     }
-
-    final tempFile = File(
-      '${Directory.systemTemp.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg',
-    );
-    await tempFile.writeAsBytes(bytes);
-    return tempFile;
   }
 
   Future<String?> _uploadNewPhoto(String userId) async {
@@ -140,16 +179,31 @@ class _EditProfileFormState extends State<EditProfileForm>
       return supabase.storage.from('profile').getPublicUrl(fileName);
     } catch (e) {
       debugPrint('Ошибка загрузки фото: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Не удалось загрузить фото: $e')),
+        );
+      }
       return widget.initialPhotoUrl;
     }
   }
 
   Future<void> _save() async {
-    if (_nameController.text.trim().isEmpty) {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Имя не может быть пустым')));
       return;
+    }
+
+    String? finalSpecialty;
+
+    if (_selectedSpecialty == 'Другое') {
+      final custom = _customSpecialtyController.text.trim();
+      finalSpecialty = custom.isNotEmpty ? custom : null;
+    } else {
+      finalSpecialty = _selectedSpecialty;
     }
 
     setState(() => _isSaving = true);
@@ -161,13 +215,11 @@ class _EditProfileFormState extends State<EditProfileForm>
       final newPhotoUrl = await _uploadNewPhoto(userId);
 
       await widget.onSave(
-        _nameController.text.trim(),
+        name,
         _aboutController.text.trim().isEmpty
             ? null
             : _aboutController.text.trim(),
-        _specialtyController.text.trim().isEmpty
-            ? null
-            : _specialtyController.text.trim(),
+        finalSpecialty,
         newPhotoUrl,
       );
     } catch (e) {
@@ -189,11 +241,13 @@ class _EditProfileFormState extends State<EditProfileForm>
     return Scaffold(
       backgroundColor: colorScheme.background,
       appBar: AppBar(
-        title: Text('Редактировать профиль',
+        title: Text(
+          'Редактировать профиль',
           style: TextStyle(
             fontWeight: FontWeight.w600,
             color: colorScheme.onSurface,
-          ),),
+          ),
+        ),
         centerTitle: true,
         backgroundColor: colorScheme.surfaceContainerLow,
         foregroundColor: colorScheme.onSurface,
@@ -282,8 +336,8 @@ class _EditProfileFormState extends State<EditProfileForm>
                       ),
                       const SizedBox(height: 24),
 
-                      TextField(
-                        controller: _specialtyController,
+                      DropdownButtonFormField<String>(
+                        value: _selectedSpecialty,
                         decoration: InputDecoration(
                           labelText: 'Специальность',
                           prefixIcon: const Icon(Icons.work_rounded),
@@ -294,9 +348,41 @@ class _EditProfileFormState extends State<EditProfileForm>
                             borderSide: BorderSide.none,
                           ),
                         ),
+                        items: _availableSpecialties.map((specialty) {
+                          return DropdownMenuItem<String>(
+                            value: specialty,
+                            child: Text(specialty),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedSpecialty = value;
+                            _showCustomSpecialtyField = value == 'Другое';
+                            if (value != 'Другое') {
+                              _customSpecialtyController.clear();
+                            }
+                          });
+                        },
+                        hint: const Text('Выберите специальность'),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
 
+                      if (_showCustomSpecialtyField) ...[
+                        TextField(
+                          controller: _customSpecialtyController,
+                          decoration: InputDecoration(
+                            labelText: 'Укажите свою специальность',
+                            prefixIcon: const Icon(Icons.edit_rounded),
+                            filled: true,
+                            fillColor: colorScheme.surfaceContainerHighest,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
                       TextField(
                         controller: _aboutController,
                         maxLines: 6,

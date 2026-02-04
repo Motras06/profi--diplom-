@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:profi/screens/other/specialist_profile.dart';
+import 'package:prowirksearch/screens/other/specialist_profile.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
+import 'dart:developer' as developer;
 
 class ServiceChatScreen extends StatefulWidget {
   final Map<String, dynamic> specialist;
@@ -144,6 +148,7 @@ class _ServiceChatScreenState extends State<ServiceChatScreen>
       });
 
       _messageController.clear();
+      _scrollToBottom();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -151,6 +156,88 @@ class _ServiceChatScreenState extends State<ServiceChatScreen>
         ).showSnackBar(SnackBar(content: Text('Не удалось отправить: $e')));
       }
     }
+  }
+
+  Future<void> _downloadAndOpenFile(
+    String fileUrl,
+    String displayFileName,
+  ) async {
+    debugPrint('→ Запрос на открытие файла: $fileUrl ($displayFileName)');
+
+    if (fileUrl.trim().isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ссылка на файл отсутствует')),
+        );
+      }
+      return;
+    }
+
+    try {
+      final dio = Dio();
+
+      String saveFileName = displayFileName.trim();
+      if (saveFileName.isEmpty) {
+        final uri = Uri.tryParse(fileUrl);
+        saveFileName =
+            uri?.pathSegments.last ??
+            'file_${DateTime.now().millisecondsSinceEpoch}';
+      }
+
+      debugPrint('Имя файла для сохранения: $saveFileName');
+
+      final directory = await getDownloadsDirectory();
+      if (directory == null) {
+        throw Exception('Не удалось получить папку загрузок');
+      }
+
+      final savePath = '${directory.path}/$saveFileName';
+      debugPrint('Путь сохранения: $savePath');
+
+      await dio.download(fileUrl, savePath);
+      debugPrint('Файл скачан: $savePath');
+
+      final result = await OpenFilex.open(savePath);
+      debugPrint('OpenFilex результат: ${result.type} — ${result.message}');
+
+      if (mounted) {
+        if (result.type != ResultType.done) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Не удалось открыть файл: ${result.message}'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Файл открыт: $saveFileName')));
+        }
+      }
+    } catch (e, stack) {
+      debugPrint('Ошибка при скачивании/открытии файла: $e');
+      developer.log('File open error', error: e, stackTrace: stack);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  IconData _getFileIcon(String fileName) {
+    final ext = fileName.split('.').last.toLowerCase();
+    return switch (ext) {
+      'pdf' => Icons.picture_as_pdf_rounded,
+      'doc' || 'docx' => Icons.description_rounded,
+      'jpg' || 'jpeg' || 'png' || 'gif' || 'webp' => Icons.image_rounded,
+      'zip' || 'rar' => Icons.folder_zip_rounded,
+      _ => Icons.attach_file_rounded,
+    };
   }
 
   void _scrollToBottom({bool animate = true}) {
@@ -332,32 +419,60 @@ class _ServiceChatScreenState extends State<ServiceChatScreen>
                       itemBuilder: (context, index) {
                         final msg = _messages[index];
                         final isMe = msg['sender_id'] == _currentUserId;
-                        final text = msg['message'] as String? ?? '';
+                        final text = msg['message'] as String?;
+                        final fileUrlRaw = msg['file_url'];
+                        final fileUrl =
+                            fileUrlRaw is String && fileUrlRaw.isNotEmpty
+                            ? fileUrlRaw
+                            : null;
                         final time = _formatTime(msg['timestamp'] as String?);
+
+                        final hasFile = fileUrl != null;
+                        final hasText = text != null && text.trim().isNotEmpty;
+
+                        final displayFileName = hasFile
+                            ? Uri.tryParse(fileUrl)?.pathSegments.last ?? 'файл'
+                            : '';
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
-                          child: GestureDetector(
-                            onLongPress: () {
-                              if (text.isNotEmpty) {
-                                _showMessageContextMenu(text);
-                              }
-                            },
-                            child: Align(
-                              alignment: isMe
-                                  ? Alignment.centerRight
-                                  : Alignment.centerLeft,
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxWidth:
-                                      MediaQuery.of(context).size.width * 0.75,
+                          child: Align(
+                            alignment: isMe
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth:
+                                    MediaQuery.of(context).size.width * 0.75,
+                              ),
+                              child: Material(
+                                elevation: isMe ? 1 : 0.5,
+                                shadowColor: Colors.black.withOpacity(0.12),
+                                color: isMe
+                                    ? colorScheme.primaryContainer
+                                    : colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.only(
+                                  topLeft: const Radius.circular(20),
+                                  topRight: const Radius.circular(20),
+                                  bottomLeft: Radius.circular(isMe ? 20 : 4),
+                                  bottomRight: Radius.circular(isMe ? 4 : 20),
                                 ),
-                                child: Material(
-                                  elevation: isMe ? 1 : 0.5,
-                                  shadowColor: Colors.black.withOpacity(0.12),
-                                  color: isMe
-                                      ? colorScheme.primaryContainer
-                                      : colorScheme.surfaceContainerHighest,
+                                child: InkWell(
+                                  onTap: () {
+                                    if (hasFile) {
+                                      _downloadAndOpenFile(
+                                        fileUrl,
+                                        displayFileName,
+                                      );
+                                    } else if (hasText) {
+                                      _copyMessage(text);
+                                    }
+                                  },
+
+                                  onLongPress: hasText
+                                      ? () => _showMessageContextMenu(text)
+                                      : null,
+
                                   borderRadius: BorderRadius.only(
                                     topLeft: const Radius.circular(20),
                                     topRight: const Radius.circular(20),
@@ -374,16 +489,53 @@ class _ServiceChatScreenState extends State<ServiceChatScreen>
                                           ? CrossAxisAlignment.end
                                           : CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          text,
-                                          style: theme.textTheme.bodyMedium
-                                              ?.copyWith(
+                                        if (hasFile) ...[
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                _getFileIcon(displayFileName),
+                                                size: 22,
                                                 color: isMe
                                                     ? colorScheme
                                                           .onPrimaryContainer
                                                     : colorScheme.onSurface,
                                               ),
-                                        ),
+                                              const SizedBox(width: 8),
+                                              Flexible(
+                                                child: Text(
+                                                  displayFileName,
+                                                  style: theme
+                                                      .textTheme
+                                                      .bodyMedium
+                                                      ?.copyWith(
+                                                        color: isMe
+                                                            ? colorScheme
+                                                                  .onPrimaryContainer
+                                                            : colorScheme
+                                                                  .onSurface,
+                                                        decoration:
+                                                            TextDecoration
+                                                                .underline,
+                                                      ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ] else if (hasText)
+                                          Text(
+                                            text,
+                                            style: theme.textTheme.bodyMedium
+                                                ?.copyWith(
+                                                  color: isMe
+                                                      ? colorScheme
+                                                            .onPrimaryContainer
+                                                      : colorScheme.onSurface,
+                                                ),
+                                          ),
+
                                         const SizedBox(height: 4),
                                         Text(
                                           time,

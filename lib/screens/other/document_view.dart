@@ -68,7 +68,8 @@ class _SpecialistDocumentsScreenState extends State<SpecialistDocumentsScreen> {
 
     try {
       final dio = Dio();
-      final fileName = doc['name'] as String? ??
+      final fileName =
+          doc['name'] as String? ??
           'document_${DateTime.now().millisecondsSinceEpoch}';
 
       final directory = await getDownloadsDirectory();
@@ -84,21 +85,19 @@ class _SpecialistDocumentsScreenState extends State<SpecialistDocumentsScreen> {
 
       if (result.type != ResultType.done && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Не удалось открыть файл: ${result.message}'),
-          ),
+          SnackBar(content: Text('Не удалось открыть файл: ${result.message}')),
         );
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Файл сохранён: $fileName')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Файл сохранён: $fileName')));
       }
     } catch (e) {
       developer.log('Ошибка скачивания: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка при скачивании: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка при скачивании: $e')));
       }
     }
   }
@@ -128,60 +127,54 @@ class _SpecialistDocumentsScreenState extends State<SpecialistDocumentsScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Документы ${widget.specialistName}'),
-      ),
+      appBar: AppBar(title: Text('Документы ${widget.specialistName}')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _documents.isEmpty
-              ? Center(
-                  child: Text(
-                    'Нет документов',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: _documents.length,
-                  itemBuilder: (context, index) {
-                    final doc = _documents[index];
-                    final name = doc['name'] as String? ?? 'Без названия';
-                    final desc = doc['description'] as String?;
-                    final date = _formatDate(doc['created_at'] as String?);
-
-                    return ListTile(
-                      leading: Icon(
-                        _getIconForFile(name),
-                        color: theme.colorScheme.primary,
-                        size: 32,
-                      ),
-                      title: Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: desc != null && desc.isNotEmpty
-                          ? Text(
-                              desc,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            )
-                          : Text(
-                              'Добавлен $date',
-                              style: TextStyle(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.download_rounded),
-                        onPressed: () => _downloadAndOpenFile(doc),
-                      ),
-                      onTap: () => _downloadAndOpenFile(doc),
-                    );
-                  },
+          ? Center(
+              child: Text(
+                'Нет документов',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: _documents.length,
+              itemBuilder: (context, index) {
+                final doc = _documents[index];
+                final name = doc['name'] as String? ?? 'Без названия';
+                final desc = doc['description'] as String?;
+                final date = _formatDate(doc['created_at'] as String?);
+
+                return ListTile(
+                  leading: Icon(
+                    _getIconForFile(name),
+                    color: theme.colorScheme.primary,
+                    size: 32,
+                  ),
+                  title: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: desc != null && desc.isNotEmpty
+                      ? Text(desc, maxLines: 2, overflow: TextOverflow.ellipsis)
+                      : Text(
+                          'Добавлен $date',
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.download_rounded),
+                    onPressed: () => _downloadAndOpenFile(doc),
+                  ),
+                  onTap: () => _downloadAndOpenFile(doc),
+                );
+              },
+            ),
     );
   }
 }

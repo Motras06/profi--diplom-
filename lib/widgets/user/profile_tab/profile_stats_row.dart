@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:profi/models/profile_stats.dart';
-import 'package:profi/widgets/user/profile_tab/profile_stat_card.dart';
+import 'package:prowirksearch/models/profile_stats.dart';
+import 'package:prowirksearch/widgets/user/profile_tab/profile_stat_card.dart';
 
 class ProfileStatsRow extends StatelessWidget {
   final ProfileStats stats;

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:profi/services/supabase_service.dart';
-import 'package:profi/screens/admin/tabs/users_tab.dart';
-import 'package:profi/screens/admin/tabs/services_tab.dart';
-import 'package:profi/screens/admin/tabs/chat_monitor_tab.dart';
-import 'package:profi/screens/admin/tabs/complaints_tab.dart'; // ← новая вкладка
-import 'package:profi/screens/auth/auth_screen.dart';
+import 'package:prowirksearch/services/supabase_service.dart';
+import 'package:prowirksearch/screens/admin/tabs/users_tab.dart';
+import 'package:prowirksearch/screens/admin/tabs/services_tab.dart';
+import 'package:prowirksearch/screens/admin/tabs/chat_monitor_tab.dart';
+import 'package:prowirksearch/screens/admin/tabs/complaints_tab.dart';
+import 'package:prowirksearch/screens/auth/auth_screen.dart';
 
 class AdminHome extends StatefulWidget {
   final String displayName;
@@ -23,9 +23,9 @@ class _AdminHomeState extends State<AdminHome> {
   Future<void> _logout(BuildContext context) async {
     await supabase.auth.signOut();
     if (context.mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const AuthScreen()),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const AuthScreen()));
     }
   }
 
@@ -37,7 +37,7 @@ class _AdminHomeState extends State<AdminHome> {
       UsersTab(),
       ServicesTab(),
       ChatMonitorTab(),
-      ComplaintsTab(), // ← новая вкладка жалоб
+      ComplaintsTab(),
     ];
   }
 
@@ -99,10 +99,8 @@ class _AdminHomeState extends State<AdminHome> {
         duration: const Duration(milliseconds: 340),
         switchInCurve: Curves.easeOutCubic,
         switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (child, animation) => FadeTransition(
-          opacity: animation,
-          child: child,
-        ),
+        transitionBuilder: (child, animation) =>
+            FadeTransition(opacity: animation, child: child),
         child: KeyedSubtree(
           key: ValueKey<int>(_selectedIndex),
           child: _pages[_selectedIndex],

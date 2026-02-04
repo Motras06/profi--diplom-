@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:profi/screens/admin/admin_home.dart';
-import 'package:profi/screens/specialist/specialist_home.dart';
-import 'package:profi/screens/user/user_home.dart';
+import 'package:prowirksearch/screens/admin/admin_home.dart';
+import 'package:prowirksearch/screens/specialist/specialist_home.dart';
+import 'package:prowirksearch/screens/user/user_home.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase_service.dart';
 

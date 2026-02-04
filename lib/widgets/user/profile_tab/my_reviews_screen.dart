@@ -102,7 +102,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
       MaterialPageRoute(builder: (context) => EditReviewScreen(review: review)),
     ).then((updated) {
       if (updated == true) {
-        _loadMyReviews(); 
+        _loadMyReviews();
       }
     });
   }

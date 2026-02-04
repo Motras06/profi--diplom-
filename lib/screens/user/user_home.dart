@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:profi/screens/user/main_tab.dart';
-import 'package:profi/screens/user/saved_tab.dart';
-import 'package:profi/screens/user/profile_tab.dart';
-import 'package:profi/screens/user/chat_tab.dart';
+import 'package:prowirksearch/screens/user/main_tab.dart';
+import 'package:prowirksearch/screens/user/saved_tab.dart';
+import 'package:prowirksearch/screens/user/profile_tab.dart';
+import 'package:prowirksearch/screens/user/chat_tab.dart';
 
 class UserHome extends StatefulWidget {
   final String displayName;

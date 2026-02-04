@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'login_tab.dart';
 import 'register_tab.dart';
 
@@ -17,6 +18,33 @@ class _AuthScreenState extends State<AuthScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestPermissions();
+    });
+  }
+
+  Future<void> _requestPermissions() async {
+    final statuses = await [Permission.photos, Permission.videos].request();
+
+    bool granted = statuses.values.every((status) => status.isGranted);
+
+    if (!granted) {
+      if (statuses.values.any((s) => s.isPermanentlyDenied)) {
+        await openAppSettings();
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Для работы с фотографиями и файлами нужны разрешения',
+            ),
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+    }
   }
 
   @override

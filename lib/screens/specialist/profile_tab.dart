@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:profi/screens/auth/auth_screen.dart';
-import 'package:profi/widgets/specialist/profile_tab/documents.dart';
-import 'package:profi/widgets/specialist/profile_tab/edit_profile_form.dart';
-import 'package:profi/screens/other/settings_screen.dart';
+import 'package:prowirksearch/screens/auth/auth_screen.dart';
+import 'package:prowirksearch/widgets/specialist/profile_tab/documents.dart';
+import 'package:prowirksearch/widgets/specialist/profile_tab/edit_profile_form.dart';
+import 'package:prowirksearch/screens/other/settings_screen.dart';
 import '../../../services/supabase_service.dart';
 
 class ProfileTab extends StatefulWidget {
@@ -14,7 +14,8 @@ class ProfileTab extends StatefulWidget {
   State<ProfileTab> createState() => _ProfileTabState();
 }
 
-class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateMixin {
+class _ProfileTabState extends State<ProfileTab>
+    with SingleTickerProviderStateMixin {
   bool _isLoading = true;
   bool _isEditing = false;
 
@@ -40,9 +41,10 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
       parent: _fadeController,
       curve: Curves.easeOutCubic,
     );
-    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.25), end: Offset.zero).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.25), end: Offset.zero).animate(
+          CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic),
+        );
 
     _loadProfile();
 
@@ -82,9 +84,9 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
     } catch (e) {
       debugPrint('Ошибка загрузки профиля: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки профиля: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка загрузки профиля: $e')));
         setState(() => _isLoading = false);
       }
     }
@@ -102,12 +104,15 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
       final userId = supabase.auth.currentUser?.id;
       if (userId == null) return;
 
-      await supabase.from('profiles').update({
-        'display_name': name.trim(),
-        'about': about?.trim(),
-        'specialty': specialty?.trim(),
-        'photo_url': photoUrl,
-      }).eq('id', userId);
+      await supabase
+          .from('profiles')
+          .update({
+            'display_name': name.trim(),
+            'about': about?.trim(),
+            'specialty': specialty?.trim(),
+            'photo_url': photoUrl,
+          })
+          .eq('id', userId);
 
       if (mounted) {
         setState(() {
@@ -119,15 +124,15 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
           _isLoading = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Профиль сохранён!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Профиль сохранён!')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка сохранения: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка сохранения: $e')));
         setState(() => _isLoading = false);
       }
     }
@@ -327,9 +332,6 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                       ),
                     ),
 
-                  // ──────────────────────────────────────────────
-                  // Добавлен блок «Мои документы»
-                  // ──────────────────────────────────────────────
                   const SizedBox(height: 24),
 
                   Card(

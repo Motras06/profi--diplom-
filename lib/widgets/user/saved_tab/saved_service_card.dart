@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../screens/other/service_screen.dart';
 import '../../../screens/other/specialist_profile.dart';
 
-class SavedServiceCard extends StatelessWidget { 
+class SavedServiceCard extends StatelessWidget {
   final Map<String, dynamic> service;
   final VoidCallback onRemove;
 
@@ -21,7 +21,8 @@ class SavedServiceCard extends StatelessWidget {
     final specialist = service['profiles'] ?? {};
     final String? photoUrl = service['main_photo'] as String?;
     final String? specialistPhoto = specialist['photo_url'] as String?;
-    final String specialistName = (specialist['display_name'] as String?) ?? 'Мастер';
+    final String specialistName =
+        (specialist['display_name'] as String?) ?? 'Мастер';
 
     final serviceName = (service['name'] as String?) ?? 'Без названия';
     final price = service['price'];
@@ -78,7 +79,9 @@ class SavedServiceCard extends StatelessWidget {
                           child: Icon(
                             Icons.broken_image_rounded,
                             size: 52,
-                            color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                            color: colorScheme.onSurfaceVariant.withOpacity(
+                              0.6,
+                            ),
                           ),
                         ),
                       ),
@@ -92,8 +95,10 @@ class SavedServiceCard extends StatelessWidget {
                               height: 44,
                               child: CircularProgressIndicator(
                                 strokeWidth: 3,
-                                value: loadingProgress.expectedTotalBytes != null
-                                    ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                value:
+                                    loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
                                     : null,
                                 color: colorScheme.primary.withOpacity(0.7),
                               ),
@@ -127,7 +132,7 @@ class SavedServiceCard extends StatelessWidget {
                         ),
                         padding: const EdgeInsets.all(10),
                         constraints: const BoxConstraints(),
-                        onPressed: onRemove,  
+                        onPressed: onRemove,
                         tooltip: 'Удалить из сохранённых',
                       ),
                     ),
@@ -145,7 +150,8 @@ class SavedServiceCard extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => SpecialistProfileScreen(specialist: specialist),
+                            builder: (_) =>
+                                SpecialistProfileScreen(specialist: specialist),
                           ),
                         );
                       },
@@ -160,7 +166,9 @@ class SavedServiceCard extends StatelessWidget {
                                 : null,
                             child: specialistPhoto == null
                                 ? Text(
-                                    specialistName.isNotEmpty ? specialistName[0].toUpperCase() : 'М',
+                                    specialistName.isNotEmpty
+                                        ? specialistName[0].toUpperCase()
+                                        : 'М',
                                     style: TextStyle(
                                       color: colorScheme.onSurfaceVariant,
                                       fontSize: 14,

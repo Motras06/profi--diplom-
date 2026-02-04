@@ -27,7 +27,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // Для безопасной загрузки шрифта
   Future<Uint8List>? _fontFuture;
 
   @override
@@ -48,7 +47,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
           CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
         );
 
-    // Загружаем шрифт заранее (асинхронно, безопасно)
     _fontFuture = _loadFont();
 
     Future.delayed(const Duration(milliseconds: 200), () {
@@ -78,10 +76,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
     if (!mounted) return;
 
     try {
-      // Инициализация локали (один раз)
       await initializeDateFormatting('ru');
 
-      // Ждём загрузки шрифта
       final fontBytes = await _fontFuture;
 
       final pdf = PdfDocument();
@@ -111,7 +107,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
 
       double y = page.getClientSize().height - 80;
 
-      // Заголовок
       pageGraphics.drawString(
         'Заказ #${widget.order['id'] ?? '—'}',
         boldFont,
@@ -121,7 +116,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
       );
       y -= 60;
 
-      // Дата создания
       pageGraphics.drawString(
         'Создан: $formattedDate',
         ttf,
@@ -130,7 +124,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
       );
       y -= 45;
 
-      // Статус
       final statusText = _formatStatus(_currentStatus);
       final statusColor = _getStatusColor(
         _currentStatus,
@@ -152,14 +145,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
       );
       y -= 50;
 
-      // Разделитель
       pageGraphics.drawRectangle(
         brush: PdfSolidBrush(PdfColor(220, 220, 220)),
         bounds: Rect.fromLTWH(40, y, page.getClientSize().width - 80, 1),
       );
       y -= 40;
 
-      // Основная информация
       _drawLabelValue(
         pageGraphics,
         ttf,
@@ -198,7 +189,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
       );
       y -= 50;
 
-      // Детали заказа
       if (details.isNotEmpty) {
         pageGraphics.drawString(
           'Детали заказа',
@@ -230,7 +220,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
         });
       }
 
-      // Нижний колонтитул
       pageGraphics.drawString(
         'Сгенерировано в приложении • ${DateFormat('dd.MM.yyyy HH:mm').format(DateTime.now())}',
         ttf,
@@ -263,9 +252,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
       if (result.type != ResultType.done && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Не удалось открыть PDF: ${result.message ?? "Нет приложения для просмотра PDF"}',
-            ),
+            content: Text('Не удалось открыть PDF: ${result.message}'),
             duration: const Duration(seconds: 6),
           ),
         );
@@ -419,7 +406,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // Безопасный доступ к данным заказа
     final orderId = widget.order['id']?.toString() ?? '—';
     final status = widget.order['status'] as String? ?? 'unknown';
     final createdAtRaw = widget.order['created_at'] as String?;
@@ -430,7 +416,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
     final details =
         widget.order['contract_details'] as Map<String, dynamic>? ?? {};
 
-    // Форматирование дат с защитой
     String formattedCreated = '—';
     String formattedUpdated = '—';
 
@@ -489,7 +474,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Карточка статуса
                   Card(
                     elevation: 1,
                     shadowColor: Colors.black.withOpacity(0.12),
@@ -542,7 +526,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
 
                   const SizedBox(height: 24),
 
-                  // Карточка исполнителя и услуги
                   Card(
                     elevation: 1,
                     shadowColor: Colors.black.withOpacity(0.12),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:profi/screens/other/view_for_specialist.dart';
+import 'package:prowirksearch/screens/other/view_for_specialist.dart';
 
 class ServiceCard extends StatefulWidget {
   final Map<String, dynamic> service;

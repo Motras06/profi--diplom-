@@ -177,17 +177,14 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
   }
 
   Future<void> _generateOrderPdf(Map<String, dynamic> order) async {
-    
     try {
       await initializeDateFormatting('ru');
       final pdf = PdfDocument();
 
-      // Правильно задаём размер страницы для всего документа
       pdf.pageSettings.size = PdfPageSize.a4;
       pdf.pageSettings.margins.all = 40;
       pdf.pageSettings.orientation = PdfPageOrientation.portrait;
 
-      // Шрифт DejaVuSans
       final fontData = await DefaultAssetBundle.of(
         context,
       ).load('assets/fonts/DejaVuSans.ttf');
@@ -211,9 +208,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
         'ru',
       ).format(date);
 
-      double y = page.getClientSize().height - 80; // правильный отступ сверху
+      double y = page.getClientSize().height - 80;
 
-      // Заголовок
       pageGraphics.drawString(
         'Заказ №${order['id']}',
         boldFont,
@@ -223,7 +219,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
       );
       y -= 60;
 
-      // Дата создания
       pageGraphics.drawString(
         'Создан: $formattedDate',
         ttf,
@@ -232,7 +227,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
       );
       y -= 45;
 
-      // Статус
       final statusText = _formatStatus(order['status']);
       final statusColor = _getStatusColor(
         order['status'],
@@ -254,14 +248,12 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
       );
       y -= 50;
 
-      // Разделитель
       pageGraphics.drawRectangle(
         brush: PdfSolidBrush(PdfColor(220, 220, 220)),
         bounds: Rect.fromLTWH(40, y, page.getClientSize().width - 80, 1),
       );
       y -= 40;
 
-      // Основная информация
       _drawLabelValue(
         pageGraphics,
         ttf,
@@ -298,7 +290,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
       );
       y -= 50;
 
-      // Детали заказа
       if (details.isNotEmpty) {
         pageGraphics.drawString(
           'Детали заказа',
@@ -330,7 +321,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
         });
       }
 
-      // Нижний колонтитул
       pageGraphics.drawString(
         'Сгенерировано в приложении ProWirkSearch • ${DateFormat('dd.MM.yyyy HH:mm').format(DateTime.now())}',
         ttf,
@@ -362,9 +352,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
       if (result.type != ResultType.done && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Не удалось открыть PDF: ${result.message ?? "Нет приложения для просмотра PDF"}',
-            ),
+            content: Text('Не удалось открыть PDF: ${result.message}'),
             duration: const Duration(seconds: 6),
             action: SnackBarAction(label: 'OK', onPressed: () {}),
           ),
@@ -391,7 +379,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
     String value,
     double x,
     double y,
-    double pageWidth, // ← добавляем параметр ширины страницы
+    double pageWidth,
   ) {
     graphics.drawString(
       '$label:',
@@ -404,16 +392,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
       value,
       regularFont,
       brush: PdfSolidBrush(PdfColor(30, 30, 30)),
-      bounds: Rect.fromLTWH(
-        x + 210,
-        y,
-        pageWidth - x - 250,
-        120,
-      ), // высота увеличена под переносы
-      format: PdfStringFormat(
-        lineSpacing: 4,
-        wordWrap: PdfWordWrapType.word, // ← правильное имя
-      ),
+      bounds: Rect.fromLTWH(x + 210, y, pageWidth - x - 250, 120),
+      format: PdfStringFormat(lineSpacing: 4, wordWrap: PdfWordWrapType.word),
     );
   }
 

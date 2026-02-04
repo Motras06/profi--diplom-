@@ -32,10 +32,8 @@ class _SpecialistServicesScreenState extends State<SpecialistServicesScreen>
     _service = ServiceService();
     _service.addListener(_onServicesChanged);
 
-    // Важно: сразу устанавливаем фильтр по специалисту
     _service.setSpecialistFilter(widget.specialistId);
 
-    // Затем загружаем услуги — теперь они уже будут отфильтрованы
     _service.loadServices2();
   }
 
@@ -55,9 +53,9 @@ class _SpecialistServicesScreenState extends State<SpecialistServicesScreen>
         onApply: () {
           if (mounted) {
             setState(() {});
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Фильтры применены')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Фильтры применены')));
           }
         },
       ),
@@ -98,42 +96,41 @@ class _SpecialistServicesScreenState extends State<SpecialistServicesScreen>
               child: _service.isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _service.filteredServices.isEmpty
-                      ? const MainTabEmptyState()
-                      : GridView.builder(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: horizontalPadding,
-                            vertical: 12,
-                          ),
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: childAspectRatio,
-                            crossAxisSpacing: crossSpacing,
-                            mainAxisSpacing: mainSpacing,
-                          ),
-                          itemCount: _service.filteredServices.length,
-                          itemBuilder: (context, index) {
-                            final service = _service.filteredServices[index];
-                            final serviceIdStr = service['id']?.toString();
+                  ? const MainTabEmptyState()
+                  : GridView.builder(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding,
+                        vertical: 12,
+                      ),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: childAspectRatio,
+                        crossAxisSpacing: crossSpacing,
+                        mainAxisSpacing: mainSpacing,
+                      ),
+                      itemCount: _service.filteredServices.length,
+                      itemBuilder: (context, index) {
+                        final service = _service.filteredServices[index];
+                        final serviceIdStr = service['id']?.toString();
 
-                            if (serviceIdStr == null) {
-                              debugPrint('У услуги нет id: $service');
-                              return const SizedBox.shrink();
-                            }
+                        if (serviceIdStr == null) {
+                          debugPrint('У услуги нет id: $service');
+                          return const SizedBox.shrink();
+                        }
 
-                            final serviceId = int.tryParse(serviceIdStr);
-                            if (serviceId == null) {
-                              return const SizedBox.shrink();
-                            }
+                        final serviceId = int.tryParse(serviceIdStr);
+                        if (serviceId == null) {
+                          return const SizedBox.shrink();
+                        }
 
-                            return ServiceCard(
-                              service: service,
-                              isSaved: _service.isServiceSaved(serviceId),
-                              onToggleSave: () =>
-                                  _service.toggleSaveService(serviceId),
-                            );
-                          },
-                        ),
+                        return ServiceCard(
+                          service: service,
+                          isSaved: _service.isServiceSaved(serviceId),
+                          onToggleSave: () =>
+                              _service.toggleSaveService(serviceId),
+                        );
+                      },
+                    ),
             ),
           ],
         ),
