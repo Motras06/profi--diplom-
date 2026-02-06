@@ -203,7 +203,7 @@ class SavedServiceCard extends StatelessWidget {
                         height: 1.25,
                         letterSpacing: -0.1,
                       ),
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
 
